@@ -25,8 +25,8 @@ static uint32_t next_read_sec;
 batlvl_setting_t batlvl_settings = { 
 	.charge_hours_fast = 8,
 	.charge_hours_slow = 12,
-	.charge_voltage_slow = 845, //13.2
-	.charge_voltage_fast = 922  //14.4
+	.charge_voltage_slow = 845*4, //13.2
+	.charge_voltage_fast = 922*4  //14.4
 };
 
 uint8_t batlvl_get_mb(void) {
@@ -70,26 +70,26 @@ static uint16_t voltage_soc_to_chgtime(uint16_t v, uint8_t soc) {
 }
 
 static uint8_t voltage_to_chglvl(uint16_t v) {
-	if (v<672) return 0;
-	if (v>807) return 100;
+	if (v<672*4) return 0;
+	if (v>807*4) return 100;
 	// 0-10% == 10.5-11.3 => 9-0 vs 723-672
  	// 10-90% == 11.3-12.5 => 89-10 vs 799 - 724
 	// 90%-100% ==  12.5-12.6 => 100-90 vs 807 - 800
 	uint16_t base_v,count_v;
 	uint8_t base_p,count_p;
-	if (v<724) {
-		base_v = 672;
-		count_v = 51;
+	if (v<724*4) {
+		base_v = 672*4;
+		count_v = 51*4;
 		base_p = 0;
 		count_p = 9;
-	} else if (v<800) {
-		base_v = 724;
-		count_v = 75;
+	} else if (v<800*4) {
+		base_v = 724*4;
+		count_v = 75*4;
 		base_p = 10;
 		count_p = 79;
 	} else {
-		base_v = 800;
-		count_v = 7;
+		base_v = 800*4;
+		count_v = 7*4;
 		base_p = 90;
 		count_p = 10;
 	}
@@ -124,7 +124,7 @@ static void batlvl_direct_estimate(void) {
 
 void batlvl_init(void) {
 	uint8_t i;
-	if ((adc_read_mb()<IGNON_MB_VOLTAGE)&&(adc_read_ign() < 384)) {
+	if ((adc_read_mb()<IGNON_MB_VOLTAGE)) {
 		batlvl_direct_estimate();
 	} else { 
 		// Making an ass out of you and me...	
@@ -140,7 +140,7 @@ void batlvl_init(void) {
 
 void batlvl_run(void) {
 	if (!timer_get_1hzp()) return; // We run at max 1Hz
-	if ((adc_read_mb()>=IGNON_MB_VOLTAGE)||(adc_read_ign() >= 384)) {
+	if ((adc_read_mb()>=IGNON_MB_VOLTAGE)) {
 		uint8_t i;
 		// "Ign=On"
 		been_ignoff_since = timer_get(); // == not yet

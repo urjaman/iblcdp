@@ -5,6 +5,10 @@
 #include "backlight.h"
 #include "hd44780.h"
 
+/* In DispCombo backlight module will also handle contrast. */
+/* Contrast: PD5 OCOB */
+
+uint8_t bl_contrast_value;
 uint8_t bl_drv_value;
 uint8_t bl_value;
 uint8_t bl_to;
@@ -45,12 +49,12 @@ static void backlight_fader(void) {
 			v2 = pgm_read_byte(&(backlight_values[bl_v_now-1]));
 			v1 = ((v1-v2)/2)+v2;
 			OCR0A = v1;
-			_delay_ms(25);
+			timer_delay_ms(25);
 			backlight_simple_set(bl_v_now-1);
-			_delay_ms(25);
+			timer_delay_ms(25);
 		} else {
 			backlight_simple_set(bl_v_now-1);
-			_delay_ms(50);
+			timer_delay_ms(50);
 		}
 		goto ret;
 	}
@@ -65,14 +69,16 @@ ret:
 }
 
 void backlight_init(void) {
-	DDRD |= _BV(6);
-	TCCR0A = _BV(COM0A1) | _BV(WGM01) | _BV(WGM00);
+	DDRD |= _BV(5); // CONTRAST
+	DDRD |= _BV(6); // BACKLIGHT
+	TCCR0A = _BV(COM0A1) | _BV(COM0B1) | _BV(WGM01) | _BV(WGM00);
 	TCCR0B = _BV(CS00);
 	bl_to = 15;
 	backlight_set(16);
 	backlight_simple_set(16);
 	bl_v_fadeto = 16;
 	bl_drv_value = 10;
+	backlight_set_contrast(5); // 0.1V
 }
 
 void backlight_set(uint8_t v) {
@@ -126,4 +132,13 @@ void backlight_run(void) {
 		bl_v_fadeto = bl_value;
 	}
 	backlight_fader();
+}
+
+void backlight_set_contrast(uint8_t contrast) {
+	bl_contrast_value = contrast;
+	OCR0B = contrast;
+}
+
+uint8_t backlight_get_contrast(void) {
+	return bl_contrast_value;
 }

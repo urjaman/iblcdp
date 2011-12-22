@@ -13,11 +13,16 @@ uint8_t tui_mp_mods[4][TUI_MODS_MAXDEPTH];
 static uint8_t tui_mp_modidx[4];
 static uint8_t tui_force_draw;
 
+uint8_t tui_pollkey(void) {
+	uint8_t v = buttons_get();
+	mini_mainloop();
+	return v;
+}
+
 uint8_t tui_waitforkey(void) {
 	uint8_t v;
 	for(;;) {
-		v = buttons_get();
-		mini_mainloop();
+		v = tui_pollkey();
 		if (v) return v;
 	}
 }
@@ -52,9 +57,10 @@ static void tui_draw_mainpage(void) {
 	memcpy(&(line[16-d]),buf,d);
 	lcd_gotoxy(0,1);
 	lcd_puts(line);
+	tui_force_draw = 0;
 }
 
-static void tui_gen_menuheader(unsigned char* line, unsigned char* buf, PGM_P header) {
+void tui_gen_menuheader(unsigned char* line, unsigned char* buf, PGM_P header) {
 	uint8_t y,z;
 	strcpy_P((char*)buf, header);
 	memset(line,'=',16);
@@ -77,7 +83,7 @@ uint8_t tui_pgm_menupart(unsigned char* line, unsigned char* buf, PGM_P const me
 		memcpy(&(line[z]),buf,y);
 		lcd_gotoxy(0,1);
 		lcd_puts(line);
-		_delay_ms(50);
+		timer_delay_ms(50);
 		key = tui_waitforkey();
 		switch (key) {
 			case BUTTON_S1:
@@ -105,40 +111,41 @@ uint8_t tui_gen_listmenu(PGM_P header, PGM_P const menu_table[], uint8_t itemcnt
 static uint16_t tui_gen_voltmenu(PGM_P header, uint16_t start) {
 	unsigned char line[17];
 	unsigned char buf[17];
-	uint16_t idx=start;
+	uint16_t idx=adc_to_dV(start);
 	tui_gen_menuheader(line,buf,header);
 	memset(line,' ',16);
 	lcd_gotoxy(0,1);
 	lcd_puts(line);
 	for(;;) {
 		uint8_t key;
-		adc_print_v(buf,idx);
+		adc_print_dV(buf,idx);
 		lcd_gotoxy(5,1);
 		lcd_puts(buf);
 		key = tui_waitforkey();
 		switch (key) {
 			case BUTTON_S1:
 				idx++;
-				if (idx==1024) idx=0;
+				if (idx>=1600) idx=0;
 				break;
 			case BUTTON_S2:
 				if (idx) idx--;
-				else idx = 1023;
+				else idx = 1599;
 				break;
 			case BUTTON_BOTH:
-				return idx;
+				return adc_from_dV(idx);
 		}
 	}
 }
 
-uint8_t tui_gen_nummenu(PGM_P header, uint8_t min, uint8_t max, uint8_t start) {
+uint16_t tui_gen_nummenu(PGM_P header, uint16_t min, uint16_t max, uint16_t start) {
 	unsigned char line[17];
 	unsigned char buf[17];
-	uint8_t idx=start, z,y;
+	uint16_t idx=start;
+	uint8_t z,y;
 	tui_gen_menuheader(line,buf,header);
 	for (;;) {
 		uint8_t key;
-		uchar2str(buf,idx);
+		uint2str(buf,idx);
 		memset(line,' ',16);
 		y = strlen((char*)buf);
 		z = (16 - y) / 2;
@@ -167,7 +174,7 @@ void tui_gen_message(PGM_P l1, PGM_P l2) {
 	lcd_puts_P(l1);
 	lcd_gotoxy((16 - strlen_P(l2))/2,1);
 	lcd_puts_P(l2);
-	_delay_ms(100);
+	timer_delay_ms(100);
 	tui_waitforkey();
 }
 
@@ -192,22 +199,66 @@ static void tui_relaymenu(void) {
 }
 
 
-const unsigned char tui_blsm_name[] PROGMEM = "BL SETTINGS";
+const unsigned char tui_blsm_name[] PROGMEM = "DISPLAY";
 const unsigned char tui_blsm_s1[] PROGMEM = "BL BRIGHTNESS";
 const unsigned char tui_blsm_s2[] PROGMEM = "BL DRV BRIGHT";
 const unsigned char tui_blsm_s3[] PROGMEM = "BL TIMEOUT";
-
+const unsigned char tui_blsm_s4[] PROGMEM = "LCD CONTRAST";
 PGM_P const tui_blsm_table[] PROGMEM = { // BL Settings Menu
 	(PGM_P)tui_blsm_s1,
 	(PGM_P)tui_blsm_s2,
 	(PGM_P)tui_blsm_s3,
+	(PGM_P)tui_blsm_s4,
 	(PGM_P)tui_exit_menu
 };
+
+const uint8_t contrast_max = 64;
+const uint8_t contrast_min = 0;
+static inline uint8_t tui_get_contrast(void) {
+	uint8_t c = backlight_get_contrast();
+	if (c>contrast_max) return 0;
+	return contrast_max - c;
+}
+
+static inline void tui_set_contrast(uint8_t c) {
+	if (c>contrast_max) c = contrast_max;
+	backlight_set_contrast(contrast_max-c);
+}
+
+static void tui_contrast_set_util(void) {
+	unsigned char line[17];
+	unsigned char buf[17];
+	uint8_t idx=tui_get_contrast(), z,y;
+	
+	tui_gen_menuheader(line,buf,(PGM_P)tui_blsm_s4);
+	for (;;) {
+		uint8_t key;
+		uchar2str(buf,idx);
+		memset(line,' ',16);
+		y = strlen((char*)buf);
+		z = (16 - y) / 2;
+		memcpy(&(line[z]),buf,y);
+		lcd_gotoxy(0,1);
+		lcd_puts(line);
+		key = tui_waitforkey();
+		switch (key) {
+			case BUTTON_S1:
+				if (idx != contrast_max) idx++;
+				break;
+			case BUTTON_S2:
+				if (idx != contrast_min) idx--;
+				break;
+			case BUTTON_BOTH:
+				return;
+		}
+		tui_set_contrast(idx);
+	}
+}
 
 static void tui_blsettingmenu(void) {
 	uint8_t sel = 0;
 	for(;;) {
-		sel = tui_gen_listmenu((PGM_P)tui_blsm_name, tui_blsm_table, 4, sel);
+		sel = tui_gen_listmenu((PGM_P)tui_blsm_name, tui_blsm_table, 5, sel);
 		switch (sel) {
 			case 0: {
 			uint8_t v = tui_gen_nummenu((PGM_P)tui_blsm_s1, 0, 16, backlight_get());
@@ -228,6 +279,11 @@ static void tui_blsettingmenu(void) {
 			break;
 
 			case 3:
+			tui_contrast_set_util();
+			break;
+			
+
+			case 4:
 			return;
 		}
 	}
@@ -377,10 +433,10 @@ void tui_init(void) {
 			tui_mp_mods[i][n] = 255;
 		}
 	}
-	tui_mp_mods[0][0] = 0;
-	tui_mp_mods[1][0] = 4;
-	tui_mp_mods[2][0] = 1;
-	tui_mp_mods[3][0] = 3;
+	tui_mp_mods[0][0] = 0; // Main Bat
+	tui_mp_mods[1][0] = 7; // Temp 0
+	tui_mp_mods[2][0] = 1; // Sec Bat
+	tui_mp_mods[3][0] = 2; // Relay State
 	tui_draw_mainpage();
 }
 

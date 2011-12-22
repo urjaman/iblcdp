@@ -57,9 +57,9 @@ void mini_mainloop(void) {
 	dallas_run();
 }
 
-int main (void) __attribute__ ((noreturn));
+void main (void) __attribute__ ((noreturn));
 
-int main(void) {
+void main(void) {
 	cli();
 	clock_prescale_set(clock_div_1);
 	noints();

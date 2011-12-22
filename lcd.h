@@ -27,4 +27,4 @@ void lcd_puts(unsigned char* str);
 void lcd_puts_P(PGM_P str);
 void lcd_clear(void);
 void lcd_gotoxy(uint8_t x, uint8_t y);
-
+void lcd_program_char(PGM_P data, uint8_t index);

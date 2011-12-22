@@ -2,15 +2,16 @@
 #include "adc.h"
 #include "timer.h"
 
-#define ADC_MUX_CNT 2
 // 65536 == no scaling applied
-#define ADC_MB_SCALE 65113
-#define ADC_FB_SCALE 64957
+#define ADC_MB_SCALE 65098
+// measures 11.99 real 11.91
+#define ADC_FB_SCALE 65317
+//  measures 11.95 real 11.91
 
-static uint16_t adc_t_values[ADC_MUX_CNT];
+
 static uint16_t adc_values[ADC_MUX_CNT];
 static int16_t adc_bat_diff;
-static uint8_t adc_diff_rsamples;
+uint16_t adc_avg_cnt=0;
 
 static void adc_set_mux(uint8_t c) {
 	ADMUX = (ADMUX&0xF0) |  (c&0xF);
@@ -38,8 +39,22 @@ int16_t adc_read_diff(void) {
 	return adc_bat_diff;
 }
 
+uint16_t adc_to_dV(uint16_t v) {
+	v = ((((uint32_t)v)*390625UL)+500000UL) / 1000000UL;
+	return v;
+}
+
+uint16_t adc_from_dV(uint16_t v) {
+	v = ((((uint32_t)v)*256UL)+50UL) / 100UL;
+	return v;
+}
+
 void adc_print_v(unsigned char* buf, uint16_t v) {
-	v = ((((uint32_t)v)*15625UL)+5000UL) / 10000UL;
+	v = adc_to_dV(v);
+	adc_print_dV(buf,v);
+}
+
+void adc_print_dV(unsigned char* buf, uint16_t v) {
 	buf[0] = (v/1000)|0x30; v = v%1000;
 	buf[1] = (v/100 )|0x30; v = v%100;
 	buf[2] = '.';
@@ -54,40 +69,72 @@ void adc_init(void) {
 	uint8_t i;
 	ADMUX = _BV(REFS0);
 	ADCSRA = _BV(ADEN) | _BV(ADPS2) | _BV(ADPS1);
-	DIDR0 = _BV(ADC0D) | _BV(ADC1D) | _BV(ADC2D);
-	for (i=0;i<ADC_MUX_CNT;i++) adc_values[i] = adc_single_read(i);
+	DIDR0 = _BV(ADC0D) | _BV(ADC1D);
+	for (i=0;i<ADC_MUX_CNT;i++) {
+		adc_values[i] = adc_single_read(i)<<2;
+	}
+	adc_bat_diff = adc_values[0] - adc_values[1];
+	adc_init_ll();
+	adc_set_mux(0);
+	ADCSRA |= _BV(ADSC) | _BV(ADIE);
 }
 
-static void adc_scale_diffs(void) {
+#if 0
+static uint16_t adc_read_supersample(int ch) {
+	uint16_t sample=0;
+	adc_set_mux(ch);
+	for (uint8_t i=0;i<16;i++) {
+		uint16_t rv;
+		ADCSRA |= _BV(ADSC);
+		while (ADCSRA & _BV(ADSC));
+		rv = ADCL;
+		rv |= (ADCH)<<8;
+		sample += rv;
+	}
+	sample = sample>>2;
+	if (ch==0) sample = (((uint32_t)sample)*ADC_MB_SCALE)/65536;
+	if (ch==1) sample = (((uint32_t)sample)*ADC_FB_SCALE)/65536;
+	return sample;
+}
+
+static void adc_output_supersample_avg(void) {
 	uint8_t i;
-	for (i=0;i<ADC_MUX_CNT;i++) adc_t_values[i] = adc_t_values[i]>>2;
-	adc_t_values[0] = (((uint32_t)adc_t_values[0])*ADC_MB_SCALE)/65536;
-	adc_t_values[1] = (((uint32_t)adc_t_values[1])*ADC_FB_SCALE)/65536;
-	adc_bat_diff = adc_t_values[0] - adc_t_values[1];
-	for (i=0;i<ADC_MUX_CNT;i++) adc_values[i] = adc_t_values[i]>>2;	
-	for (i=0;i<ADC_MUX_CNT;i++) adc_t_values[i] = 0;
-}
+	for (i=0;i<ADC_MUX_CNT;i++) {
+		adc_values[i] = adc_t_values[i]/adc_tv_cnt;
+		adc_t_values[i] = 0;
+	}
+	adc_bat_diff = adc_values[0] - adc_values[1];
+	adc_tv_cnt=0;
+}	
 
+static void adc_read_supersample_set(void) {
+	for (uint8_t i=0;i<ADC_MUX_CNT;i++) {
+		adc_t_values[i] += adc_read_supersample(i);
+	}
+	adc_tv_cnt++;
+}
+#endif
 void adc_run(void) {
-	uint8_t i;
+#if 0
 	if (timer_get_1hzp()) {
-		adc_scale_diffs();
+		adc_output_supersample_avg();
+		adc_read_supersample_set();
+		adc_read_supersample_set();
+		adc_read_supersample_set();
+		adc_read_supersample_set();
 	} else if (timer_get_5hzp()) {
-		adc_diff_rsamples = 4;
-		timer_set_waiting();
-	} else if (adc_diff_rsamples) {
-		uint16_t m,f;
-		adc_diff_rsamples--;
-		m  = adc_single_read(0);
-		f  = adc_single_read(1);
-		m += adc_single_read(0);
-		f += adc_single_read(1);
-		m += adc_single_read(0);
-		adc_t_values[0] += (m/3);
-		adc_t_values[1] += (f/2);
-//		for(i=2;i<ADC_MUX_CNT;i++) adc_t_values[i] += adc_single_read(i);
-		if (adc_diff_rsamples) {
-			timer_set_waiting();
+		adc_read_supersample_set();
+		adc_read_supersample_set();
+		adc_read_supersample_set();
+	}
+#else
+	if (timer_get_1hzp()) {
+		adc_avg_cnt = adc_run_ll(adc_values);
+		if (adc_avg_cnt) {
+			adc_values[0] = (((uint32_t)adc_values[0])*ADC_MB_SCALE)/65536;	
+			adc_values[1] = (((uint32_t)adc_values[1])*ADC_FB_SCALE)/65536;	
+			adc_bat_diff = adc_values[0] - adc_values[1];
 		}
 	}
+#endif
 }

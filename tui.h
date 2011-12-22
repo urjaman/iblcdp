@@ -8,12 +8,15 @@ void tui_run(void);
 void tui_activate(void);
 
 // These are for tui-*.c:
+uint8_t tui_pollkey(void);
 uint8_t tui_waitforkey(void);
 uint8_t tui_pgm_menupart(unsigned char* line, unsigned char* buf, PGM_P const menu_table[], uint8_t itemcnt, uint8_t start);
 
 uint8_t tui_gen_listmenu(PGM_P header, PGM_P const menu_table[], uint8_t itemcnt, uint8_t start);
 void tui_gen_message(PGM_P l1, PGM_P l2);
-uint8_t tui_gen_nummenu(PGM_P header, uint8_t min, uint8_t max, uint8_t start);
+uint16_t tui_gen_nummenu(PGM_P header, uint16_t min, uint16_t max, uint16_t start);
+void tui_gen_menuheader(unsigned char* line, unsigned char* buf, PGM_P header);
+
 
 /* tui-other.c */
 void tui_othermenu(void);
@@ -25,3 +28,5 @@ void tui_config_menu(void);
 
 /* tui-calc.c */
 void tui_calc(void);
+void tui_calc_fuel_cost(void);
+void tui_calc_fc_history(void);

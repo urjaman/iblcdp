@@ -26,7 +26,7 @@ void relay_init(void) {
 	relay_clr_thinkstack();
 	relay_mode = RLY_MODE_OFF;
 	relay_last_act_sec  = 0;
-	relay_auto_voltage = 858; // 13.41V
+	relay_auto_voltage = 858*4; // 13.41V
 	relay_last_autodecision = RLY_MODE_OFF;
 	relay_auto_keep_on = 90;
 }

@@ -58,15 +58,15 @@ uint8_t tui_run_mod(uint8_t mod, uint8_t *p, uint8_t ml) {
 		default: return 0;
 		case 0: return tui_mbv_mod(p,ml);
 		case 1: return tui_fbv_mod(p,ml);
-		case 3: return tui_rlst_mod(p,ml);
-		case 4: return tui_clk24_mod(p,ml);
-		case 5: return tui_clk28_mod(p,ml);
-		case 6: return tui_dif_mod(p,ml);
-		case 7: return tui_amp_mod(p,ml);
-		case 8: return tui_temp_mod(p,ml,0);
-		case 9: return tui_temp_mod(p,ml,1);
-		case 10: return tui_soc_mod(p,ml,'M',batlvl_get_mb());
-		case 11: return tui_soc_mod(p,ml,'F',batlvl_get_fb());
+		case 2: return tui_rlst_mod(p,ml);
+		case 3: return tui_clk24_mod(p,ml);
+		case 4: return tui_clk28_mod(p,ml);
+		case 5: return tui_dif_mod(p,ml);
+		case 6: return tui_amp_mod(p,ml);
+		case 7: return tui_temp_mod(p,ml,0);
+		case 8: return tui_temp_mod(p,ml,1);
+		case 9: return tui_soc_mod(p,ml,'M',batlvl_get_mb());
+		case 10: return tui_soc_mod(p,ml,'S',batlvl_get_fb());
 	}
 }
 
@@ -119,7 +119,7 @@ static uint8_t tui_mbv_mod(uint8_t* buf, uint8_t ml) {
 
 static uint8_t tui_fbv_mod(uint8_t* buf, uint8_t ml) {
 	uint8_t mb[9];
-	mb[0] = 'F';
+	mb[0] = 'S';
 	mb[1] = ':';
 	adc_print_v(&(mb[2]),adc_read_fb());
 	return tui_modfinish(buf,mb,ml,8);

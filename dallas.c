@@ -30,6 +30,14 @@ static uint8_t d1w_devicecnt=0;
 static uint8_t d1w_devices[D1W_MAX_DEVICES][8];
 static int16_t d1w_temps[D1W_MAX_TEMPDEVS];
 
+static inline void adie_off(void) {
+	ADCSRA =  ADCSRA & ~(_BV(ADIE)|_BV(ADIF));
+}
+
+static inline void adie_on(void) {
+	ADCSRA = (ADCSRA |  _BV(ADIE)) & ~_BV(ADIF);
+}
+
 static void d1w_wait(void) {
 	uint8_t v=0;
 	asm volatile (
@@ -76,20 +84,25 @@ static void d1w_wait_up(void) {
 }
 
 static uint8_t d1w_reset(void) {
+	uint8_t rv;
 	uint8_t i;
 	d1w_wait_up();
 	d1w_wait();
 	d1w_down();
 	for(i=0;i<15;i++) d1w_wait();
+	adie_off();
 	d1w_up();
 	for(i=0;i<3;i++) d1w_wait();
-	return (!d1w_sense());
+	rv = !d1w_sense();
+	adie_on();
+	return rv;
 }
 
 static void d1w_sendbyte(uint8_t b) {
 	uint8_t bc;
 	d1w_wait_up();
 	for(bc=0;bc<8;bc++) {
+		adie_off();
 		d1w_wait();
 		d1w_down();
 		if (b&0x01) {
@@ -100,6 +113,8 @@ static void d1w_sendbyte(uint8_t b) {
 		d1w_wait();
 		d1w_wait();
 		d1w_up();
+		adie_on();
+		_delay_us(1);
 	}
 }
 
@@ -107,6 +122,7 @@ static uint8_t d1w_recvbyte(void) {
 	uint8_t b=0;
 	uint8_t bc;
 	for(bc=0;bc<8;bc++) {
+		adie_off();
 		d1w_wait_up(); // safety if slave pulls down longer than expected
 		d1w_wait();
 		_delay_us(4); // always atleast 4us pause between bits
@@ -117,6 +133,8 @@ static uint8_t d1w_recvbyte(void) {
 		d1w_wait();
 		if (d1w_sense()) b |= 0x80;
 		d1w_wait();
+		adie_on();
+		_delay_us(1);
 	}
 	return b;
 }
@@ -124,6 +142,7 @@ static uint8_t d1w_recvbyte(void) {
 static uint8_t d1w_rbit(void) {
 	uint8_t r;
 	d1w_wait_up();
+	adie_off();
 	d1w_wait();
 	d1w_down();
 	_delay_us(8);
@@ -132,6 +151,7 @@ static uint8_t d1w_rbit(void) {
 	r = d1w_sense();
 	d1w_wait();
 	d1w_wait();
+	adie_on();
 	return r;
 }
 

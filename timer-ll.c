@@ -66,6 +66,15 @@ uint8_t timer_getdec_todo(void) {
 	return rv;
 }
 
+uint32_t timer_get_linear_ss_time(void) {
+	uint8_t todo;
+	uint16_t sstimer;
+	cli();
+	todo = timer_run_todo;
+	sstimer = timer_get_subsectimer(); // sei() happens here
+	return (uint32_t)todo*SSTC + sstimer;
+}
+
 uint8_t timer_get_todo(void) {
 	uint8_t rv;
 	// cli is not needed here since timer_run_todo is uint8_t

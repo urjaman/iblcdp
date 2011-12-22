@@ -1,4 +1,5 @@
 #include "main.h"
+#include "backlight.h"
 #include "timer.h"
 #include "tui.h"
 #include "lcd.h"
@@ -81,6 +82,11 @@ static void tui_stopwatch(void) {
 	lcd_puts_P((PGM_P)tui_om_s3);
 	for(;;) {
 		mini_mainloop();
+		if (!buttons_get_v()) break;
+	}
+	timer_delay_ms(100);
+	for(;;) {
+		mini_mainloop();
 		if (buttons_get_v()) break;
 	}
 	time[6] = time[4] = time[3] = time[1] = time[0] = '0';
@@ -89,10 +95,11 @@ static void tui_stopwatch(void) {
 	time[7] = 0;
 	lcd_gotoxy(4,1);
 	lcd_puts(time);
-	_delay_ms(150);
+	timer_delay_ms(150);
 	for(;;) {
 		mini_mainloop();
 		if (timer_get_5hzp()) {
+			if (timer_get_1hzp()) backlight_activate(); // Keep backlight on
 			uint16_t tt,t2;
 			timer += 2;
 			if (timer>=60000) timer=0;
@@ -114,21 +121,42 @@ static void tui_stopwatch(void) {
 
 const unsigned char tui_om_s1[] PROGMEM = "CALC";
 const unsigned char tui_om_s2[] PROGMEM = "UPTIME";
-
-const unsigned char tui_om_s4[] PROGMEM = "1WR";
-const unsigned char tui_om_s5[] PROGMEM = "EXIT MENU";
+const unsigned char tui_om_s4[] PROGMEM = "FUEL COST";
+const unsigned char tui_om_s5[] PROGMEM = "FC HISTORY";
+const unsigned char tui_om_s6[] PROGMEM = "EXIT MENU";
 PGM_P const tui_om_table[] PROGMEM = {
     (PGM_P)tui_om_s1,
     (PGM_P)tui_om_s2,
     (PGM_P)tui_om_s3,
     (PGM_P)tui_om_s4,
     (PGM_P)tui_om_s5,
+    (PGM_P)tui_om_s6,
 };
+
+#if 0
+{
+				unsigned char buf[10];
+				extern uint16_t adc_avg_cnt;
+				for (;;) {
+					uint8_t x;
+					lcd_clear();
+					uint2str(buf,adc_avg_cnt);
+					lcd_puts(buf);
+					for(;;) {
+						x = buttons_get();
+						mini_mainloop();
+						if (x) break;
+						if (timer_get_1hzp()) break;
+					}
+					if (x) break;
+				}
+				}
+#endif
 
 void tui_othermenu(void) {
 	uint8_t sel=0;	
 	for (;;) {
-		sel = tui_gen_listmenu(PSTR("OTHERS"), tui_om_table, 5, sel);
+		sel = tui_gen_listmenu(PSTR("OTHERS"), tui_om_table, 6, sel);
 		switch (sel) {
 			default:
 			case 0:
@@ -140,10 +168,13 @@ void tui_othermenu(void) {
 			case 2:
 				tui_stopwatch();
 				break;
-			case 3:
-			//	dallas_reset();
+			case 3: 
+				tui_calc_fuel_cost();
 				break;
-			case 4: 
+			case 4:
+				tui_calc_fc_history();
+				break;
+			case 5:
 				return;
 		}
 	}

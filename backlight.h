@@ -7,3 +7,5 @@ void backlight_run(void);
 uint8_t backlight_get(void);
 uint8_t backlight_get_dv(void);
 uint8_t backlight_get_to(void);
+void backlight_set_contrast(uint8_t contrast);
+uint8_t backlight_get_contrast(void);

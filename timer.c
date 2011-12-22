@@ -2,7 +2,6 @@
 #include "timer.h"
 #include "buttons.h"
 
-#define SSTC ((F_CPU+128)/256)
 
 uint8_t timer_waiting=0;
 
@@ -25,6 +24,19 @@ static void timer_gen_5hzp(void) {
 		timer_5hzp=1;
 		state++;
 	}
+}
+
+	
+
+void timer_delay_us(uint32_t us) {
+	uint32_t ss_start = timer_get_linear_ss_time();
+	if (us>200000) us = 200000; // Safety Limit for 5hzP
+	uint32_t ss_end = ss_start + (us/US_PER_SSUNIT) + 1;
+	while (timer_get_linear_ss_time()<ss_end) sleep_mode();
+}
+
+void timer_delay_ms(uint8_t ms) {
+	timer_delay_us((uint32_t)ms*1000);
 }
 
 void timer_set_waiting(void) {

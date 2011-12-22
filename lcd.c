@@ -92,3 +92,14 @@ start:
 	str++;
 	goto start;
 	}
+	
+void lcd_program_char(PGM_P data, uint8_t index) {
+	hd44780_wait_ready();
+	hd44780_outcmd(HD44780_CGADDR(index<<3));
+	for(uint8_t i=0;i<8;i++) {
+		hd44780_wait_ready();
+		hd44780_outdata(pgm_read_byte(data));
+		data++;
+	}
+}
+		

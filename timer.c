@@ -1,18 +1,13 @@
 #include "main.h"
 #include "timer.h"
 #include "buttons.h"
+#include "rtc.h"
 
-
+/* This part is the non-calendar/date/time-related part. Just uptimer, etc. */
 uint8_t timer_waiting=0;
-
 static uint8_t timer_1hzp=0;
 static uint8_t timer_5hzp=0;
-static uint8_t seconds=0;
-static uint8_t minutes=0;
-static uint8_t hours_24=0;
-static uint8_t hours_28=0;
 static uint32_t secondstimer=0;
-static uint32_t last_time_set=0;
 
 static void timer_gen_5hzp(void) {
 	static uint8_t state=0;
@@ -25,8 +20,6 @@ static void timer_gen_5hzp(void) {
 		state++;
 	}
 }
-
-	
 
 void timer_delay_us(uint32_t us) {
 	uint32_t ss_start = timer_get_linear_ss_time();
@@ -43,28 +36,16 @@ void timer_set_waiting(void) {
 	timer_waiting=1;
 }
 
+/* This is the interface from non-calendar time to calendar time functions. */
+static void timer_time_tick();
+
 void timer_run(void) {
 	timer_1hzp=0;
 	for (;;) {
 		if (timer_getdec_todo()) {
-			uint8_t tmp = seconds + 1;
 			secondstimer++;
 			timer_1hzp=1;
-			if (tmp == 60) {
-				tmp = minutes + 1;
-					if (tmp == 60) {
-						tmp = hours_24 + 1;
-						if (tmp == 24) tmp = 0;
-						hours_24 = tmp;
-						tmp = hours_28 + 1;
-						if (tmp == 28) tmp = 0;
-						hours_28 = tmp;
-						tmp = 0;
-					}
-				minutes = tmp;
-				tmp = 0;
-			}
-			seconds = tmp;
+			timer_time_tick();
 		}
 		timer_gen_5hzp();
 		if ((timer_5hzp)||(timer_1hzp)||(timer_waiting)||(buttons_get_v())) {
@@ -88,71 +69,61 @@ uint8_t timer_get_5hzp(void) {
 	return timer_5hzp;
 }
 
-static int32_t time_diff(uint8_t h1, uint8_t m1, uint8_t s1, uint8_t h2, uint8_t m2, uint8_t s2) { // new, old
-	int32_t t1,t2, t3;
-	t1 = ((h1*60+m1)*60)+s1;
-	t2 = ((h2*60+m2)*60)+s2;
-	t3 = t1 - t2;
-	if (t3 > 43200) t3 -= 86400;
-	return t3;
+/*******************************************/
+/* Here start the calendar time functions. */
+/*******************************************/
+
+// Time ticking without RTC is considered valid for this time.
+#define TIME_NONRTC_VALID_TIME (6*60*60)
+
+uint32_t timer_time_last_valid_moment=0;
+uint8_t timer_time_valid=0;
+static struct mtm timer_tm_now = { 0,1,1,0,0,0 };
+
+void timer_set_time(struct mtm *tm) {
+	timer_tm_now = *tm;
+	timer_time_valid = 1;
+	timer_time_last_valid_moment = secondstimer;
+	rtc_write(tm); // If there is an RTC, set time into it.
 }
 
-void timer_set_time24(uint8_t hours, uint8_t mins, uint8_t secs) {
-	uint32_t days = (secondstimer - last_time_set)/86400;
-	if (hours > 23) hours = 0;
-	if (mins > 59) mins = 0;
-	if (secs > 59) secs = 0; 
-	if ((days)&&(days<10)) {
-		uint32_t min_diff = days*60; // if differense is less than a minute per day, we have achieved 0.07% accuracy.
-					     // Wont try to ask more from an RC osc.
-		uint32_t max_diff = (57*60); // allow changing to/from daylight saving time without calibrating
-		int32_t diff = time_diff(hours,mins,secs,hours_24,minutes,seconds);
-		if ((abs(diff) < max_diff)&&(abs(diff) > min_diff)) {
-			uint8_t cal = OSCCAL;
-			if (diff>0) { 
-				// We're too slow
-				if ((cal!=255)&&(cal!=127)) {
-					cal++;
-					OSCCAL = cal;
-				}
-			}
-			if (diff<0) {
-				// We're too fast
-				if ((cal!=128)&&(cal!=0)) {
-					cal--;
-					OSCCAL = cal;
-				}
-			}
-		}
+
+void timer_get_time(struct mtm *tm) {
+	*tm = timer_tm_now;
+}
+
+uint8_t timer_time_isvalid(void) {
+	return timer_time_valid;
+}
+
+static void timer_time_tick(void) {
+	struct mtm rtctime;
+	if (rtc_read(&rtctime)==0) { // We have RTC and it is valid, take it as the absolute truth.
+		timer_tm_now = rtctime;
+		timer_time_valid = 1;
+		timer_time_last_valid_moment = secondstimer;
+		return;
 	}
-	last_time_set = secondstimer;
-	hours_24 = hours;
-	minutes = mins;
-	seconds = secs;
-}
-
-void timer_set_time28(uint8_t hours, uint8_t mins, uint8_t secs) {
-	if (hours > 27) hours = 0;
-	hours_28 = hours;
-	mins=mins;secs=secs;
-}
-
-void timer_get_time24(uint8_t* hp, uint8_t* mp, uint8_t* sp) {
-	uint8_t h,m,s;
-	h = hours_24;
-	m = minutes;
-	s = seconds;
-	*hp = h;
-	*mp = m;
-	*sp = s;
-}
-
-void timer_get_time28(uint8_t* hp, uint8_t* mp, uint8_t* sp) {
-	uint8_t h,m,s;
-	h = hours_28;
-	m = minutes;
-	s = seconds;
-	*hp = h;
-	*mp = m;
-	*sp = s;
+	// We have no RTC and have to wing it on our own.
+	uint32_t tmp = timer_tm_now.sec+1;
+	if (tmp>=60) {
+		tmp = timer_tm_now.min+1;
+		if (tmp>=60) {
+			tmp = timer_tm_now.hour+1;
+			if (tmp>=24) {
+				tmp = mtm2lindate(&timer_tm_now)+1;
+				lindate2mtm(&timer_tm_now,tmp);
+			}
+			timer_tm_now.hour = tmp;
+			tmp = 0;
+		}
+		timer_tm_now.min = tmp;
+		tmp = 0;
+	}
+	timer_tm_now.sec = tmp;
+	// Time incremented. Check if it is valid and whether it should still be valid.
+	if (timer_time_valid) {
+		uint32_t passed = secondstimer - timer_time_last_valid_moment;
+		if (passed>TIME_NONRTC_VALID_TIME) timer_time_valid = 0;
+	}
 }

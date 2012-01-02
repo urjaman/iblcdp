@@ -8,6 +8,7 @@
 #include "backlight.h"
 #include "saver.h"
 #include "tui.h"
+#include "time.h"
 
 uint8_t tui_mp_mods[4][TUI_MODS_MAXDEPTH];
 static uint8_t tui_mp_modidx[4];
@@ -199,7 +200,7 @@ static void tui_relaymenu(void) {
 }
 
 
-const unsigned char tui_blsm_name[] PROGMEM = "DISPLAY";
+const unsigned char tui_blsm_name[] PROGMEM = "DISPLAY CFG";
 const unsigned char tui_blsm_s1[] PROGMEM = "BL BRIGHTNESS";
 const unsigned char tui_blsm_s2[] PROGMEM = "BL DRV BRIGHT";
 const unsigned char tui_blsm_s3[] PROGMEM = "BL TIMEOUT";
@@ -290,37 +291,24 @@ static void tui_blsettingmenu(void) {
 }
 
 
-const unsigned char tui_sc_s1[] PROGMEM = "OFF";
-const unsigned char tui_sc_s2[] PROGMEM = "24H";
-const unsigned char tui_sc_s3[] PROGMEM = "28H";
-
-PGM_P const tui_sc_table[] PROGMEM = { // Show Clock
-    (PGM_P)tui_sc_s1,
-    (PGM_P)tui_sc_s2,
-    (PGM_P)tui_sc_s3
-};
-
-PGM_P const tui_cs_table[] PROGMEM = { // Clock Set
-    (PGM_P)tui_sc_s2,
-    (PGM_P)tui_sc_s3
-};
 
 const unsigned char tui_setclock_name[] PROGMEM = "SET CLOCK";
-static void tui_set_clock(void) {
-	uint8_t v = tui_gen_listmenu((PGM_P)tui_setclock_name, tui_cs_table, 2, 0);
-	if (v) {
-		uint8_t hours, mins, secs;
-		timer_get_time28(&hours,&mins,&secs);
-		hours = tui_gen_nummenu(PSTR("HOURS (28)"), 0, 27, hours);
-		timer_set_time28(hours,mins,secs);
-	} else {
-		uint8_t hours, mins, secs;
-		timer_get_time24(&hours,&mins,&secs);
-		secs = 0;
-		hours = tui_gen_nummenu(PSTR("HOURS (24)"), 0, 23, hours);
-		mins = tui_gen_nummenu(PSTR("MINUTES"),0,59, mins);
-		timer_set_time24(hours,mins,secs);
+void tui_set_clock(void) {
+	struct mtm tm;
+	timer_get_time(&tm);
+	tm.sec = 0;
+	uint16_t year = tui_gen_nummenu(PSTR("YEAR"),TIME_EPOCH_YEAR,TIME_EPOCH_YEAR+130,tm.year+TIME_EPOCH_YEAR);
+	uint8_t month = tui_gen_nummenu(PSTR("MONTH"),1,12,tm.month);
+	year = year - TIME_EPOCH_YEAR;
+	if ((tm.month != month)||(tm.year != year)) { // Day count in the month possibly changed, cannot start from old day.
+		tm.day = 1;
 	}
+	tm.day = tui_gen_nummenu(PSTR("DAY"),1,month_days(year,month-1),tm.day);
+	tm.year = year;
+	tm.month = month;
+	tm.hour = tui_gen_nummenu(PSTR("HOURS"), 0, 23, tm.hour);
+	tm.min = tui_gen_nummenu(PSTR("MINUTES"),0, 59, tm.min);
+	timer_set_time(&tm);
 }	
 
 

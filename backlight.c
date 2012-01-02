@@ -8,18 +8,18 @@
 /* In DispCombo backlight module will also handle contrast. */
 /* Contrast: PD5 OCOB */
 
-uint8_t bl_contrast_value;
-uint8_t bl_drv_value;
-uint8_t bl_value;
-uint8_t bl_to;
-uint32_t bl_last_sec=0;
+static uint8_t bl_contrast_value;
+static uint8_t bl_drv_value;
+static uint8_t bl_value;
+static uint8_t bl_to;
+static uint32_t bl_last_sec=0;
 
 const uint8_t backlight_values[17] PROGMEM = {
 	0, 1, 2, 3, 4, 8, 13, 21, 32, 45, 62, 83, 108, 137, 171, 210, 255
 };
 
-int8_t bl_v_now;
-int8_t bl_v_fadeto;
+static int8_t bl_v_now;
+static int8_t bl_v_fadeto;
 
 static void backlight_simple_set(int8_t v) {
 	if (v < 0) {

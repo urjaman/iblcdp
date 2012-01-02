@@ -1,5 +1,5 @@
 uint8_t batlvl_get_mb(void);
-uint8_t batlvl_get_fb(void);
+uint8_t batlvl_get_sb(void);
 void batlvl_init(void);
 void batlvl_run(void);
 

@@ -1,7 +1,7 @@
  #include "main.h"
  #include "time.h"
  #include "lib.h"
- 
+ // lib.c
 static uint8_t is_leap(uint8_t y_in) {
 	uint16_t year = (uint16_t)y_in+TIME_EPOCH_YEAR;
 	if ((year%4)==0) {
@@ -63,13 +63,21 @@ uint32_t mtm2linear(struct mtm * tm) {
 	return counter;
 }
 
-void linear2mtm(struct mtm*tm, uint32_t lintime) {
-	uint32_t subday = lintime%86400;
-	uint32_t days = lintime/86400;
-	tm->sec = subday%60;
-	subday /= 60;
-	tm->min = subday%60;
-	tm->hour = subday/60;
+uint32_t mtm2lindate(struct mtm *tm) {
+	uint32_t counter=0; // Just count days.
+	for (uint8_t aj=0;aj<tm->year;aj++) {
+		counter += year_days(aj);
+	}
+	uint8_t mon = tm->month-1;
+	for (uint8_t am=0;am<mon;am++) {
+		counter += month_days(tm->year, am);
+	}
+	counter += (tm->day-1);
+	return counter;
+}
+
+void lindate2mtm(struct mtm*tm, uint32_t lindate) {
+	uint32_t days = lindate;
 	uint8_t year;
 	uint32_t days_compare=0;
 	for(year=0;year<255;year++) {
@@ -91,19 +99,30 @@ void linear2mtm(struct mtm*tm, uint32_t lintime) {
 	tm->day = days+1;
 }
 
-void linear_date_string(unsigned char* buf, uint32_t lintime) {
-	struct mtm tm;
-	linear2mtm(&tm,lintime);
-	uint16_t year = tm.year + TIME_EPOCH_YEAR;
-	// Assumed: year is 4 numbers (1000-9999).
-	uint2str(buf,year);
-	buf[4] = '-';
-	buf[5] = (tm.month/10) | 0x30;
-	buf[6] = (tm.month%10) | 0x30;
-	buf[7] = '-';
-	buf[8] = (tm.day/10) | 0x30;
-	buf[9] = (tm.day%10) | 0x30;
-	buf[10] = 0;
+void linear2mtm(struct mtm*tm, uint32_t lintime) {
+	uint32_t subday = lintime%86400;
+	uint32_t days = lintime/86400;
+	tm->sec = subday%60;
+	subday /= 60;
+	tm->min = subday%60;
+	tm->hour = subday/60;
+	uint8_t year;
+	uint32_t days_compare=0;
+	for(year=0;year<140;year++) {
+		uint16_t yd = year_days(year);
+		if ((days_compare+yd)>days) break;
+		days_compare += yd;
+	}
+	tm->year = year;
+	days = days - days_compare;
+	uint8_t mon;
+	days_compare=0;
+	for(mon=0;mon<12;mon++) {
+		uint8_t md = month_days(year,mon);
+		if ((days_compare+md)>days) break;
+		days_compare += md;
+	}
+	tm->month = mon+1;
+	days = days - days_compare;
+	tm->day = days+1;
 }
-
-

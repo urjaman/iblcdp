@@ -6,12 +6,11 @@
 #include "dallas.h"
 #include "batlvl.h"
 
-#define TUI_MOD_CNT 11
+#define TUI_MOD_CNT 10
 static uint8_t tui_mbv_mod(uint8_t* buf, uint8_t max);
-static uint8_t tui_fbv_mod(uint8_t* buf, uint8_t max);
+static uint8_t tui_sbv_mod(uint8_t* buf, uint8_t max);
 static uint8_t tui_rlst_mod(uint8_t* buf, uint8_t max);
 static uint8_t tui_clk24_mod(uint8_t* buf, uint8_t max);
-static uint8_t tui_clk28_mod(uint8_t* buf, uint8_t max);
 static uint8_t tui_dif_mod(uint8_t* buf, uint8_t ml);
 static uint8_t tui_amp_mod(uint8_t* buf, uint8_t ml);
 static uint8_t tui_temp_mod(uint8_t* buf, uint8_t ml, uint8_t idx);
@@ -20,30 +19,28 @@ static uint8_t tui_soc_mod(uint8_t* buf, uint8_t ml, uint8_t c, uint8_t soc);
 
 static const unsigned char nullstr[] PROGMEM = "-NONE-";
 static const unsigned char mbistr[] PROGMEM = "MAIN BAT VOLTS";
-static const unsigned char fbistr[] PROGMEM = "SEC BAT VOLTS";
+static const unsigned char sbistr[] PROGMEM = "SEC BAT VOLTS";
 static const unsigned char rlststr[] PROGMEM = "RELAY STATE";
 static const unsigned char clk24str[] PROGMEM = "CLOCK/24H";
-static const unsigned char clk28str[] PROGMEM = "CLOCK/28H";
 static const unsigned char diffstr[] PROGMEM = "BAT VOLT DIFF";
 static const unsigned char ampstr[] PROGMEM = "AMPS OVER RELAY";
 static const unsigned char temp0str[] PROGMEM = "TEMP SENSOR 0";
 static const unsigned char temp1str[] PROGMEM = "TEMP SENSOR 1";
 static const unsigned char mbsocstr[] PROGMEM = "MAIN BAT SoC";
-static const unsigned char fbsocstr[] PROGMEM = "SEC BAT SoC";
+static const unsigned char sbsocstr[] PROGMEM = "SEC BAT SoC";
 
 PGM_P const tui_mods_table[] PROGMEM = {
     (PGM_P)nullstr,
     (PGM_P)mbistr,
-    (PGM_P)fbistr,
+    (PGM_P)sbistr,
     (PGM_P)rlststr,
     (PGM_P)clk24str,
-    (PGM_P)clk28str,
     (PGM_P)diffstr,
     (PGM_P)ampstr,
     (PGM_P)temp0str,
     (PGM_P)temp1str,
     (PGM_P)mbsocstr,
-    (PGM_P)fbsocstr,
+    (PGM_P)sbsocstr,
 };
 
 uint8_t tui_select_mod(uint8_t sel) {
@@ -57,16 +54,15 @@ uint8_t tui_run_mod(uint8_t mod, uint8_t *p, uint8_t ml) {
 	switch (mod) {
 		default: return 0;
 		case 0: return tui_mbv_mod(p,ml);
-		case 1: return tui_fbv_mod(p,ml);
+		case 1: return tui_sbv_mod(p,ml);
 		case 2: return tui_rlst_mod(p,ml);
 		case 3: return tui_clk24_mod(p,ml);
-		case 4: return tui_clk28_mod(p,ml);
-		case 5: return tui_dif_mod(p,ml);
-		case 6: return tui_amp_mod(p,ml);
-		case 7: return tui_temp_mod(p,ml,0);
-		case 8: return tui_temp_mod(p,ml,1);
-		case 9: return tui_soc_mod(p,ml,'M',batlvl_get_mb());
-		case 10: return tui_soc_mod(p,ml,'S',batlvl_get_fb());
+		case 4: return tui_dif_mod(p,ml);
+		case 5: return tui_amp_mod(p,ml);
+		case 6: return tui_temp_mod(p,ml,0);
+		case 7: return tui_temp_mod(p,ml,1);
+		case 8: return tui_soc_mod(p,ml,'M',batlvl_get_mb());
+		case 9: return tui_soc_mod(p,ml,'S',batlvl_get_sb());
 	}
 }
 
@@ -117,11 +113,11 @@ static uint8_t tui_mbv_mod(uint8_t* buf, uint8_t ml) {
 	return tui_modfinish(buf,mb,ml,8);
 }
 
-static uint8_t tui_fbv_mod(uint8_t* buf, uint8_t ml) {
+static uint8_t tui_sbv_mod(uint8_t* buf, uint8_t ml) {
 	uint8_t mb[9];
 	mb[0] = 'S';
 	mb[1] = ':';
-	adc_print_v(&(mb[2]),adc_read_fb());
+	adc_print_v(&(mb[2]),adc_read_sb());
 	return tui_modfinish(buf,mb,ml,8);
 }
 
@@ -181,33 +177,25 @@ static void tui_drawtime(unsigned char* line, uint8_t h, uint8_t m) {
 }
 
 static uint8_t tui_clk24_mod(uint8_t* buf, uint8_t ml) {
+	struct mtm tm;
 	uint8_t mb[5];
-	uint8_t h,m,s;
-	timer_get_time24(&h,&m,&s);
-	tui_drawtime(mb,h,m);
-	return tui_modfinish(buf,mb,ml,5);
-}
-
-static uint8_t tui_clk28_mod(uint8_t* buf, uint8_t ml) {
-	uint8_t mb[5];
-	uint8_t h,m,s;
-	timer_get_time28(&h,&m,&s);
-	tui_drawtime(mb,h,m);
+	timer_get_time(&tm);
+	tui_drawtime(mb,tm.hour,tm.min);
 	return tui_modfinish(buf,mb,ml,5);
 }
 
 
 static uint8_t tui_dif_mod(uint8_t* buf, uint8_t ml) {
-	uint16_t mbv,fbv;
+	uint16_t mbv,sbv;
 	uint8_t mb[8];
 	mbv = adc_read_mb();
-	fbv = adc_read_fb();
-	if (mbv >= fbv) {
+	sbv = adc_read_sb();
+	if (mbv >= sbv) {
 		mb[0] = '+';
-		mbv = mbv - fbv;
+		mbv = mbv - sbv;
 	} else {
 		mb[0] = '-';
-		mbv = fbv - mbv;
+		mbv = sbv - mbv;
 	}
 	adc_print_v(&(mb[1]), mbv);
 	if (mb[1] == ' ') {

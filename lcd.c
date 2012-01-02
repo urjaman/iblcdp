@@ -24,6 +24,19 @@
 #error "LCD_MAXY > 2 not supported, yet."
 #endif
 
+
+static const uint8_t lcd_eur_sign[8] PROGMEM = {
+	0b00111,
+	0b01000,
+	0b11110,
+	0b01000,
+	0b11110,
+	0b01000,
+	0b00111,
+	0b00000
+};
+
+
 /*
  * Setup the LCD controller.  First, call the hardware initialization
  * function, then adjust the display attributes we want.
@@ -52,6 +65,13 @@ lcd_init(void)
    */
   hd44780_outcmd(HD44780_DISPCTL(1, 0, 0));
   hd44780_wait_ready();
+  
+  /* Program CGRAM characters. For now only EUR sign at index 0 (or 8) */
+  lcd_program_char((PGM_P)lcd_eur_sign, 0);
+  
+  /* Go to the corner... */
+  lcd_gotoxy(0,0);
+  
 }
 
 void lcd_gotoxy(uint8_t x, uint8_t y) {

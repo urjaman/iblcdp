@@ -79,7 +79,7 @@ void adc_cmd(void) {
 	adc_print_v(buf,adc_read_mb());
 	sendstr(buf);
 	sendcrlf();
-	adc_print_v(buf,adc_read_fb());
+	adc_print_v(buf,adc_read_sb());
 	sendstr(buf);
 }
 

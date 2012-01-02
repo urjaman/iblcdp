@@ -23,29 +23,6 @@ static unsigned char isvalid(unsigned char c, unsigned char base) {
 	return 1;
 }
 
-
-void uint2str(unsigned char *buf, uint16_t val) {
-	luint2str(buf,(uint32_t)val);
-}
-
-void uint2xstr(unsigned char *buf,uint16_t val) {
-	luint2xstr(buf,(uint32_t)val);
-}
-
-
-void uchar2str(unsigned char *buf, uint8_t val) {
-	uint2str(buf,(uint16_t)val);
-}
-
-void uchar2xstr(unsigned char *buf,uint8_t val) {
-	unsigned char offset;
-	offset = ((val>>4)&0x0F);
-	buf[0] = hextab_func(offset);
-	offset = (val&0x0F);
-	buf[1] = hextab_func(offset);
-	buf[2] = 0;
-}
-
 uint8_t str2uchar(unsigned char *buf) {
 	uint8_t rv;
 	for (rv=0;*buf;buf++) {
@@ -84,15 +61,36 @@ uint32_t astr2luint(unsigned char *buf) {
 	return rv;
 }
 
-void luint2str(unsigned char *buf, uint32_t val) {
-	ultoa(val,(char*)buf,10);
+uint8_t uint2str(unsigned char *buf, uint16_t val) {
+	return luint2str(buf,(uint32_t)val);
 }
 
-void luint2xstr(unsigned char *buf, uint32_t val) {
+uint8_t uint2xstr(unsigned char *buf,uint16_t val) {
+	return luint2xstr(buf,(uint32_t)val);
+}
+
+
+uint8_t uchar2str(unsigned char *buf, uint8_t val) {
+	return uint2str(buf,(uint16_t)val);
+}
+
+uint8_t uchar2xstr(unsigned char *buf,uint8_t val) {
+	unsigned char offset;
+	offset = ((val>>4)&0x0F);
+	buf[0] = hextab_func(offset);
+	offset = (val&0x0F);
+	buf[1] = hextab_func(offset);
+	buf[2] = 0;
+	return 2;
+}
+
+uint8_t luint2str(unsigned char *buf, uint32_t val) {
+	ultoa(val,(char*)buf,10);
+	return strlen((char*)buf);
+}
+
+uint8_t luint2xstr(unsigned char *buf, uint32_t val) {
 	ultoa(val,(char*)buf,16);
 	strupr((char*)buf); // i dont like "aaaah"...
+	return strlen((char*)buf);
 }
-
-
-
-

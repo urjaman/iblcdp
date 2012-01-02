@@ -31,7 +31,7 @@ uint16_t adc_read_mb(void) {
 	return adc_values[0];
 }
 
-uint16_t adc_read_fb(void) {
+uint16_t adc_read_sb(void) {
 	return adc_values[1];
 }
 
@@ -79,55 +79,7 @@ void adc_init(void) {
 	ADCSRA |= _BV(ADSC) | _BV(ADIE);
 }
 
-#if 0
-static uint16_t adc_read_supersample(int ch) {
-	uint16_t sample=0;
-	adc_set_mux(ch);
-	for (uint8_t i=0;i<16;i++) {
-		uint16_t rv;
-		ADCSRA |= _BV(ADSC);
-		while (ADCSRA & _BV(ADSC));
-		rv = ADCL;
-		rv |= (ADCH)<<8;
-		sample += rv;
-	}
-	sample = sample>>2;
-	if (ch==0) sample = (((uint32_t)sample)*ADC_MB_SCALE)/65536;
-	if (ch==1) sample = (((uint32_t)sample)*ADC_FB_SCALE)/65536;
-	return sample;
-}
-
-static void adc_output_supersample_avg(void) {
-	uint8_t i;
-	for (i=0;i<ADC_MUX_CNT;i++) {
-		adc_values[i] = adc_t_values[i]/adc_tv_cnt;
-		adc_t_values[i] = 0;
-	}
-	adc_bat_diff = adc_values[0] - adc_values[1];
-	adc_tv_cnt=0;
-}	
-
-static void adc_read_supersample_set(void) {
-	for (uint8_t i=0;i<ADC_MUX_CNT;i++) {
-		adc_t_values[i] += adc_read_supersample(i);
-	}
-	adc_tv_cnt++;
-}
-#endif
 void adc_run(void) {
-#if 0
-	if (timer_get_1hzp()) {
-		adc_output_supersample_avg();
-		adc_read_supersample_set();
-		adc_read_supersample_set();
-		adc_read_supersample_set();
-		adc_read_supersample_set();
-	} else if (timer_get_5hzp()) {
-		adc_read_supersample_set();
-		adc_read_supersample_set();
-		adc_read_supersample_set();
-	}
-#else
 	if (timer_get_1hzp()) {
 		adc_avg_cnt = adc_run_ll(adc_values);
 		if (adc_avg_cnt) {
@@ -136,5 +88,4 @@ void adc_run(void) {
 			adc_bat_diff = adc_values[0] - adc_values[1];
 		}
 	}
-#endif
 }

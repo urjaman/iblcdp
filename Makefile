@@ -1,6 +1,6 @@
 # AVR-GCC Makefile
 PROJECT=carlcdp
-SOURCES=main.c uart.c console.c lib.c appdb.c commands.c hd44780.c lcd.c timer.c backlight.c buttons.c adc.c relay.c tui.c saver.c tui-other.c dallas.c tui-modules.c tui-calc.c batlvl.c time.c
+SOURCES=main.c uart.c console.c lib.c appdb.c commands.c hd44780.c lcd.c timer.c backlight.c buttons.c adc.c relay.c tui.c saver.c tui-other.c dallas.c tui-modules.c tui-calc.c batlvl.c time.c i2c.c rtc.c
 DEPS=Makefile
 CC=avr-gcc
 OBJCOPY=avr-objcopy

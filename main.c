@@ -13,6 +13,7 @@
 #include "saver.h"
 #include "dallas.h"
 #include "batlvl.h"
+#include "i2c.h"
 
 #ifdef ENABLE_UARTIF
 #define RECVBUFLEN 64
@@ -63,6 +64,7 @@ void main(void) {
 	cli();
 	clock_prescale_set(clock_div_1);
 	noints();
+	i2c_init(); // It will need to be before uart_init eventually
 	uart_init();
 	lcd_init();
 	backlight_init();

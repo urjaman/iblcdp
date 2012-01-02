@@ -281,32 +281,29 @@ void tui_calc(void) {
 	tui_show_calc_result(&s, PSTR("RESULT:"), PSTR(""));
 }
 
-// This is maximum supported by the FC history viewer. Also note that this is 800 bytes of RAM usage.
-#define TUI_FC_HISTORY_SIZE 100
 
-struct tui_fc_history_entry {
-	uint16_t time_days; // Days in lintime (epoch 2000)
-	uint16_t kilometers; // *10
-	uint16_t fuel_price; // *1000
-	uint16_t litres; // *100
-};
 // This is only kept during system runtime.
-static uint8_t tui_fc_history_count=0;
-static struct tui_fc_history_entry tui_fc_history[TUI_FC_HISTORY_SIZE];
-static int16_t tui_fc_day_correction = 0;
-static uint32_t tui_fc_time_baseline;
+uint8_t tui_fc_history_count=0;
+struct tui_fc_history_entry tui_fc_history[TUI_FC_HISTORY_SIZE];
+
 // This is saved by saver.c:
 uint16_t tui_fc_last_fuel_price = 1500;
 uint16_t tui_fc_last_fuel_efficiency = 800; // l/100km*100
 uint16_t tui_fc_last_kilometres = 3000; // 300km*10
 
-static void tui_calc_fuel_add_history(uint16_t time_days, uint16_t kilometers, uint16_t fuel_price, uint16_t litres) {
+
+static void tui_fc_history_del_idx(uint8_t idx) {
+	uint8_t i;
+	if (idx>=tui_fc_history_count) return;
+	for (i=idx+1;i<tui_fc_history_count;i++) {
+		tui_fc_history[i-1] = tui_fc_history[i];
+	}
+	tui_fc_history_count--;
+}
+
+void tui_calc_fuel_add_history(uint16_t time_days, uint16_t kilometers, uint16_t fuel_price, uint16_t litres) {
 	if (tui_fc_history_count==TUI_FC_HISTORY_SIZE) { // Delete oldest
-		uint8_t i;
-		for(i=1;i<TUI_FC_HISTORY_SIZE;i++) {
-			tui_fc_history[i-1] = tui_fc_history[i];
-		}
-		tui_fc_history_count = TUI_FC_HISTORY_SIZE-1;
+		tui_fc_history_del_idx(0);
 	}
 	tui_fc_history[tui_fc_history_count].time_days = time_days;
 	tui_fc_history[tui_fc_history_count].kilometers = kilometers;
@@ -315,48 +312,6 @@ static void tui_calc_fuel_add_history(uint16_t time_days, uint16_t kilometers, u
 	tui_fc_history_count++;
 }
 
-static const uint8_t tui_eur_sign[8] PROGMEM = {
-	0b00111,
-	0b01000,
-	0b11110,
-	0b01000,
-	0b11110,
-	0b01000,
-	0b00111,
-	0b00000
-};
-
-
-uint16_t tui_confirm_lindate(PGM_P header, uint16_t lindate) {
-	unsigned char line[17];
-	unsigned char buf[17];
-	uint16_t idx=lindate;
-	uint8_t z,y;
-	tui_gen_menuheader(line,buf,header);
-	for (;;) {
-		uint8_t key;
-		linear_date_string(buf, ((uint32_t)idx)*86400);
-		memset(line,' ',16);
-		y = strlen((char*)buf);
-		z = (16 - y) / 2;
-		memcpy(&(line[z]),buf,y);
-		lcd_gotoxy(0,1);
-		lcd_puts(line);
-		key = tui_waitforkey();
-		switch (key) {
-			case BUTTON_S1:
-				idx++;
-				break;
-			case BUTTON_S2:
-				idx--;
-				break;
-			case BUTTON_BOTH:
-				return idx;
-		}
-	}	
-}
-
-
 
 void tui_calc_fuel_cost(void) {
 	struct tcalcstate s = { 0,0,10,1 };
@@ -364,21 +319,19 @@ void tui_calc_fuel_cost(void) {
 	uint32_t price = tui_fc_last_fuel_price;
 	uint32_t efficiency = tui_fc_last_fuel_efficiency;
 	uint32_t litres;
-	// 0. Send euro sign to LCD ...
-	lcd_program_char((PGM_P)tui_eur_sign, 0);
 	// 1. Ask(/Verify) KM
 	s.n1 = km;
-	tui_calc_alt_entry(PSTR("Trip km:"),&s,200,65535,10,100,10,10);
+	tui_calc_alt_entry(PSTR("TRIP KM:"),&s,200,65535,10,100,10,10);
 	km = s.n1;
 	// 2. Verify(/Ask) E/l
 	s.dpts = 3;
 	s.n1 = price;
-	tui_calc_alt_entry(PSTR("\x08/l:"),&s,100,65535,10,10,10,10);
+	tui_calc_alt_entry(PSTR("\x08/L:"),&s,100,65535,10,10,10,10);
 	price = s.n1;
 	// 3. Verify(/Ask) l/100km
 	s.dpts = 2;
 	s.n1 = efficiency;
-	tui_calc_alt_entry(PSTR("l/100km:"),&s,100,65535,10,10,10,10);
+	tui_calc_alt_entry(PSTR("L/100KM:"),&s,100,65535,10,10,10,10);
 	efficiency = s.n1;
 	tui_fc_last_kilometres = km;
 	tui_fc_last_fuel_price = price;
@@ -390,38 +343,41 @@ void tui_calc_fuel_cost(void) {
 	tui_show_calc_result(&s,PSTR("FUEL COST:"),PSTR(" \x08"));
 	// 5. Verify/Ask Litres
 	s.n1 = litres;
-	tui_calc_alt_entry(PSTR("Litres:"),&s,20,65535,10,100,10,10);
+	tui_calc_alt_entry(PSTR("LITRES:"),&s,20,65535,10,100,10,10);
 	litres = s.n1;
 	// 6. Calculate and show fuel efficiency
 	s.n1 = (litres*1000)/km;
-	tui_show_calc_result(&s,PSTR("EFFICIENCY:"),PSTR(" l/100km"));
+	tui_show_calc_result(&s,PSTR("EFFICIENCY:"),PSTR(" L/100KM"));
 	// 7. Verify/Ask date
 	uint16_t lindate;
-	if (tui_fc_history_count==0) { // Initial date request
-		struct mtm tm;
-		uint16_t year = tui_gen_nummenu(PSTR("Year:"),TIME_EPOCH_YEAR,TIME_EPOCH_YEAR+254,TIME_EPOCH_YEAR);
-		uint8_t month = tui_gen_nummenu(PSTR("Month:"),1,12,1);
-		year = year - TIME_EPOCH_YEAR;
-		tm.year = year;
-		tm.month = month;
-		uint8_t day = tui_gen_nummenu(PSTR("Day:"),1,month_days(year,month-1),1);
-		tm.day = day;
-		uint8_t h,m,s;
-		timer_get_time24(&h,&m,&s);
-		tm.hour = h;
-		tm.min = m;
-		tm.sec = s;
-		uint32_t linear_now = mtm2linear(&tm);
-		tui_fc_time_baseline = linear_now - timer_get();
-		lindate = linear_now/86400;
-	} else {
-		lindate = (timer_get()+tui_fc_time_baseline)/86400;
-		uint16_t user_lindate = tui_confirm_lindate(PSTR("Date:"),lindate+tui_fc_day_correction);
-		tui_fc_day_correction = user_lindate - lindate;
-		lindate = user_lindate;
+	if (!timer_time_isvalid()) { // Use the normal time setting menu.
+		tui_set_clock();
 	}
+	struct mtm tm;
+	timer_get_time(&tm);
+	lindate = mtm2lindate(&tm);
 	tui_calc_fuel_add_history(lindate,km,price,litres);
 }
+
+const unsigned char tui_fchm_name[] PROGMEM = "FC HISTORY";
+const unsigned char tui_fchm_s1[] PROGMEM = "EXIT"; // TUI FUEL COST HISTORY MENU
+const unsigned char tui_fchm_s2[] PROGMEM = "DEL ENTRY";
+const unsigned char tui_fchm_s3[] PROGMEM = "SHOW L/100KM";
+const unsigned char tui_fchm_s4[] PROGMEM = "SHOW \x08/L";
+
+
+PGM_P const tui_fchm_table_m0[] PROGMEM = {
+    (PGM_P)tui_fchm_s1,
+    (PGM_P)tui_fchm_s2,
+    (PGM_P)tui_fchm_s3
+};
+
+PGM_P const tui_fchm_table_m1[] PROGMEM = {
+    (PGM_P)tui_fchm_s1,
+    (PGM_P)tui_fchm_s2,
+    (PGM_P)tui_fchm_s4
+};
+
 
 // History Screen:
 // 0123456789012345
@@ -430,11 +386,13 @@ void tui_calc_fuel_cost(void) {
 // static void tui_calc_printno(unsigned char* buf, uint32_t num, uint8_t base, uint8_t dpts) {
 
 void tui_calc_fc_history(void) {
+	uint8_t mode=0;
+	uint8_t idx=0;
+reload:
 	if (tui_fc_history_count==0) {
 		tui_gen_message(PSTR("NO FUEL COST"),PSTR("HISTORY"));
 		return;
 	}
-	uint8_t idx=0;
 	for(;;) {
 		struct mtm tm;
 		unsigned char buf[17];
@@ -444,7 +402,7 @@ void tui_calc_fc_history(void) {
 		line[0] = (idx/10)|0x30;
 		line[1] = (idx%10)|0x30;
 		line[2] = ':';
-		linear2mtm(&tm, ((uint32_t)tui_fc_history[idx].time_days)*86400);
+		lindate2mtm(&tm, tui_fc_history[idx].time_days);
 		tm.year = tm.year % 100;
 		line[3] = (tm.year/10)|0x30;
 		line[4] = (tm.year%10)|0x30;
@@ -452,7 +410,14 @@ void tui_calc_fc_history(void) {
 		line[6] = (tm.month%10)|0x30;
 		line[7] = (tm.day/10)|0x30;
 		line[8] = (tm.day%10)|0x30;
-		tui_calc_printno(buf,tui_fc_history[idx].fuel_price,10,3);
+		if (mode==0) {
+			tui_calc_printno(buf,tui_fc_history[idx].fuel_price,10,3);
+		} else {
+			uint32_t litres = tui_fc_history[idx].litres;
+			uint32_t km = tui_fc_history[idx].kilometers;
+			uint32_t eff = (litres*1000)/km;
+			tui_calc_printno(buf,eff,10,2);
+		}
 		uint8_t s = strlen((char*)buf);
 		memcpy(&(line[16-s]),buf,s);
 		lcd_gotoxy(0,0);
@@ -479,8 +444,24 @@ void tui_calc_fc_history(void) {
 				if (idx) idx--;
 				else idx = tui_fc_history_count-1;
 				break;
-			case BUTTON_BOTH:
-				return;
+			case BUTTON_BOTH: {
+					uint8_t v;
+					if (mode) v = tui_gen_listmenu((PGM_P)tui_fchm_name, tui_fchm_table_m1, 3, 0);
+					else v = tui_gen_listmenu((PGM_P)tui_fchm_name, tui_fchm_table_m0, 3, 0);
+					switch (v) {
+						default:
+						case 0: // EXIT
+							return;
+						case 1: // DEL IDX
+							tui_fc_history_del_idx(idx);
+							if (idx) idx--;
+							goto reload;
+						case 2: // FLIP MODE
+							mode ^= 1;
+							break;
+					}
+				}
+				break;
 		}
 	}
 }

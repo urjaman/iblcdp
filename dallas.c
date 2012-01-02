@@ -296,13 +296,14 @@ static void d1w_scan(void) {
 	d1w_devicecnt = cnt;
 }
 static void d1w_matchrom(uint8_t idx) {
+#if D1W_MAX_DEVICES > 1
 	uint8_t i;
 	d1w_reset();
-#if D1W_MAX_DEVICES > 1
 	d1w_sendbyte(0x55);
 	for(i=0;i<8;i++) d1w_sendbyte(d1w_devices[idx][i]);
 #else
-	i=idx;
+	idx=idx;
+	d1w_reset();
 	d1w_sendbyte(0xCC);
 #endif
 }

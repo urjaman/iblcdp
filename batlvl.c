@@ -5,21 +5,21 @@
 
 /* This is the most pseudo-science module yet. */
 /* It attempts to estimate battery charge levels, so they 
-   can be used to guide relay usage. */
+   could later be used to guide relay usage. */
 
 #define BATTERY_COOLOFF_PERIOD (2*60*60)
 #define CHGLVL_DEPTH 3
 #define BATTERY_CHGLEVEL_READ_INTERVAL (10*60)
-#define IGNON_MB_VOLTAGE 808
+#define IGNON_MB_VOLTAGE (808*4)
 #define MB_WAS_CHARGING 1
-#define FB_WAS_CHARGING 2
+#define SB_WAS_CHARGING 2
 
 static uint8_t mb_chglvl[CHGLVL_DEPTH];
-static uint8_t fb_chglvl[CHGLVL_DEPTH];
+static uint8_t sb_chglvl[CHGLVL_DEPTH];
 static uint8_t was_charging=0;
 static uint32_t been_ignoff_since=0;
 static uint32_t next_mb_charge_sec;
-static uint32_t next_fb_charge_sec;
+static uint32_t next_sb_charge_sec;
 static uint32_t next_read_sec;
 
 batlvl_setting_t batlvl_settings = { 
@@ -32,8 +32,8 @@ batlvl_setting_t batlvl_settings = {
 uint8_t batlvl_get_mb(void) {
 	return mb_chglvl[CHGLVL_DEPTH-1];
 }
-uint8_t batlvl_get_fb(void) {
-	return fb_chglvl[CHGLVL_DEPTH-1];
+uint8_t batlvl_get_sb(void) {
+	return sb_chglvl[CHGLVL_DEPTH-1];
 }
 
 static uint16_t chargehours_to_seconds(uint8_t hours) {
@@ -114,11 +114,11 @@ static void batlvl_direct_estimate(void) {
 		mb_chglvl[i] = mb_chglvl[i-1];
 	}
 	mb_chglvl[0] = voltage_to_chglvl(adc_read_mb());
-	if (!is_charging(adc_read_fb())) {
+	if (!is_charging(adc_read_sb())) {
 		for(i=CHGLVL_DEPTH-1;i;i--) {
-			fb_chglvl[i] = fb_chglvl[i-1];
+			sb_chglvl[i] = sb_chglvl[i-1];
 		}
-		fb_chglvl[0] = voltage_to_chglvl(adc_read_fb());
+		sb_chglvl[0] = voltage_to_chglvl(adc_read_sb());
 	}
 }
 
@@ -129,11 +129,11 @@ void batlvl_init(void) {
 	} else { 
 		// Making an ass out of you and me...	
 		mb_chglvl[0] = 80;
-		fb_chglvl[0] = 50;
+		sb_chglvl[0] = 50;
 	}
 	for(i=1;i<CHGLVL_DEPTH;i++) {
 		mb_chglvl[i] = mb_chglvl[0];
-		fb_chglvl[i] = fb_chglvl[0];
+		sb_chglvl[i] = sb_chglvl[0];
 	}
 }
 
@@ -148,7 +148,7 @@ void batlvl_run(void) {
 		// Flush recent chglvl data
 		for(i=0;i<CHGLVL_DEPTH-1;i++) {
 			mb_chglvl[i] = mb_chglvl[CHGLVL_DEPTH-1];
-			fb_chglvl[i] = fb_chglvl[CHGLVL_DEPTH-1];
+			sb_chglvl[i] = sb_chglvl[CHGLVL_DEPTH-1];
 		}
 	}
 	if ((been_ignoff_since+BATTERY_COOLOFF_PERIOD) <= timer_get()) {
@@ -175,21 +175,21 @@ void batlvl_run(void) {
 	} else {
 		was_charging &= ~MB_WAS_CHARGING;
 	}
-	if (is_charging(adc_read_fb())) {
-		if (was_charging&FB_WAS_CHARGING) {
-			if (timer_get()>=next_fb_charge_sec) {
-				if (fb_chglvl[CHGLVL_DEPTH-1]<100) {
-					fb_chglvl[CHGLVL_DEPTH-1]++;
+	if (is_charging(adc_read_sb())) {
+		if (was_charging&SB_WAS_CHARGING) {
+			if (timer_get()>=next_sb_charge_sec) {
+				if (sb_chglvl[CHGLVL_DEPTH-1]<100) {
+					sb_chglvl[CHGLVL_DEPTH-1]++;
 				}
-				next_fb_charge_sec = timer_get() +
-				voltage_soc_to_chgtime(adc_read_fb(),fb_chglvl[CHGLVL_DEPTH-1]);
+				next_sb_charge_sec = timer_get() +
+				voltage_soc_to_chgtime(adc_read_sb(),sb_chglvl[CHGLVL_DEPTH-1]);
 			}
 		} else { 
-			was_charging |= FB_WAS_CHARGING;
-			next_mb_charge_sec = timer_get() +
-			voltage_soc_to_chgtime(adc_read_fb(),fb_chglvl[CHGLVL_DEPTH-1]);
+			was_charging |= SB_WAS_CHARGING;
+			next_sb_charge_sec = timer_get() +
+			voltage_soc_to_chgtime(adc_read_sb(),sb_chglvl[CHGLVL_DEPTH-1]);
 		}
 	} else {
-		was_charging &= ~FB_WAS_CHARGING;
+		was_charging &= ~SB_WAS_CHARGING;
 	}
 }

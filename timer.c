@@ -5,9 +5,11 @@
 
 /* This part is the non-calendar/date/time-related part. Just uptimer, etc. */
 uint8_t timer_waiting=0;
-static uint8_t timer_1hzp=0;
-static uint8_t timer_5hzp=0;
+static uint8_t timer_1hzp=0; // 1 HZ Pulse, 0/1
+static uint8_t timer_5hzp=0; // 5 HZ Pulse
 static uint32_t secondstimer=0;
+static uint8_t timer5hz=0; // Linear 8-bit counter at 5hz, rolls over every 51s.
+static uint8_t timer5hz_todo=0; // Used to fix linear counter if a 5hz pulse is missed.
 
 static void timer_gen_5hzp(void) {
 	static uint8_t state=0;
@@ -45,9 +47,15 @@ void timer_run(void) {
 		if (timer_getdec_todo()) {
 			secondstimer++;
 			timer_1hzp=1;
+			timer5hz += timer5hz_todo;
+			timer5hz_todo = 5;
 			timer_time_tick();
 		}
 		timer_gen_5hzp();
+		if (timer_5hzp) {
+			timer5hz++;
+			timer5hz_todo--;
+		}
 		if ((timer_5hzp)||(timer_1hzp)||(timer_waiting)||(buttons_get_v())) {
 			timer_waiting=0;
 			break;
@@ -67,6 +75,10 @@ uint8_t timer_get_1hzp(void) {
 
 uint8_t timer_get_5hzp(void) {
 	return timer_5hzp;
+}
+
+uint8_t timer_get_5z_cnt(void) {
+	return timer5hz;
 }
 
 /*******************************************/
@@ -97,8 +109,9 @@ uint8_t timer_time_isvalid(void) {
 }
 
 static void timer_time_tick(void) {
+	uint8_t rv;
 	struct mtm rtctime;
-	if (rtc_read(&rtctime)==0) { // We have RTC and it is valid, take it as the absolute truth.
+	if ((rv=rtc_read(&rtctime))==0) { // We have RTC and it is valid, take it as the absolute truth.
 		timer_tm_now = rtctime;
 		timer_time_valid = 1;
 		timer_time_last_valid_moment = secondstimer;
@@ -125,5 +138,8 @@ static void timer_time_tick(void) {
 	if (timer_time_valid) {
 		uint32_t passed = secondstimer - timer_time_last_valid_moment;
 		if (passed>TIME_NONRTC_VALID_TIME) timer_time_valid = 0;
+	}
+	if ((timer_time_valid)&&(rv==2)) { // RTC did exist but had no time, and our time is still valid, set RTC.
+		rtc_write(&timer_tm_now);
 	}
 }

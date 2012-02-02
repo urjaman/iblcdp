@@ -3,7 +3,7 @@
 #include "time.h"
 #include "i2c.h"
 #include "rtc.h"
-// main.c
+
 #define PCF8563_I2C_ADDR 0xA2
 #define RTC_I2C_ADDR PCF8563_I2C_ADDR
 

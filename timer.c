@@ -77,7 +77,7 @@ uint8_t timer_get_5hzp(void) {
 	return timer_5hzp;
 }
 
-uint8_t timer_get_5z_cnt(void) {
+uint8_t timer_get_5hz_cnt(void) {
 	return timer5hz;
 }
 

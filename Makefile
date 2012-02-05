@@ -1,6 +1,6 @@
 # AVR-GCC Makefile
 PROJECT=carlcdp
-SOURCES=main.c uart.c console.c lib.c appdb.c commands.c hd44780.c lcd.c timer.c backlight.c buttons.c adc.c relay.c tui.c saver.c tui-other.c dallas.c tui-modules.c tui-calc.c batlvl.c time.c i2c.c rtc.c
+SOURCES=main.c uart.c console.c lib.c appdb.c commands.c hd44780.c lcd.c timer.c backlight.c buttons.c adc.c relay.c tui.c saver.c tui-other.c dallas.c tui-modules.c tui-calc.c tui-temp.c batlvl.c time.c i2c.c rtc.c
 DEPS=Makefile
 CC=avr-gcc
 OBJCOPY=avr-objcopy
@@ -13,7 +13,7 @@ $(PROJECT).hex: $(PROJECT).out
 	$(AVRBINDIR)$(OBJCOPY) -j .text -j .data -O ihex $(PROJECT).out $(PROJECT).hex
  
 $(PROJECT).out: $(SOURCES) timer-ll.o adc-ll.o
-	$(AVRBINDIR)$(CC) $(CFLAGS) -flto -fwhole-program -I./ -o $(PROJECT).out $(SOURCES) timer-ll.o adc-ll.o -lm
+	$(AVRBINDIR)$(CC) $(CFLAGS) -flto -fwhole-program -I./ -o $(PROJECT).out  $(SOURCES) timer-ll.o adc-ll.o -lc -lm
 
 timer-ll.o: timer-ll.c timer.c main.h
 	$(AVRBINDIR)$(CC) $(CFLAGS) -I./ -c -o timer-ll.o timer-ll.c
@@ -30,7 +30,10 @@ objdump: $(PROJECT).out
 
 
 program: $(PROJECT).hex
-	$(AVRBINDIR)$(AVRDUDECMD) -U flash:w:$(PROJECT).hex
+	cp $(PROJECT).hex /tmp && cd /tmp && $(AVRBINDIR)$(AVRDUDECMD) -U flash:w:$(PROJECT).hex
+
+size: $(PROJECT).out
+	$(AVRBINDIR)avr-size $(PROJECT).out
 
 clean:
 	-rm -f *.o

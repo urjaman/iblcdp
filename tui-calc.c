@@ -9,8 +9,7 @@
 static void tui_calc_printno(unsigned char* buf, uint32_t num, uint8_t base, uint8_t dpts) {
 	uint8_t x;
 	if (base==16) {
-		luint2xstr(buf,(uint32_t)num);
-		x = strlen((char*)buf);
+		x = luint2xstr(buf,(uint32_t)num);
 		buf[x] = 'H';
 		buf[x+1] = 0;
 	} else {
@@ -20,7 +19,7 @@ static void tui_calc_printno(unsigned char* buf, uint32_t num, uint8_t base, uin
 		if (neg) buf[0] = '-';
 		// buf="123" or "0"
 		if (dpts) {
-			x = strlen((char*)buf);
+			x = strlen((char*)buf); // might not match luint2str expectations if neg.
 			if ((x-(1+neg))<dpts) {
 				uint8_t i,y;
 				y = dpts - (x-(1+neg));
@@ -282,21 +281,74 @@ void tui_calc(void) {
 }
 
 
-// This is only kept during system runtime.
+// These are RAM copies.
 uint8_t tui_fc_history_count=0;
-struct tui_fc_history_entry tui_fc_history[TUI_FC_HISTORY_SIZE];
-
-// This is saved by saver.c:
+uint8_t tui_fc_history_offset=0; // For some eeprom cycle reducing
 uint16_t tui_fc_last_fuel_price = 1500;
 uint16_t tui_fc_last_fuel_efficiency = 800; // l/100km*100
 uint16_t tui_fc_last_kilometres = 3000; // 300km*10
 
+struct tui_fc_history_entry tui_fc_history[TUI_FC_HISTORY_SIZE];
+
+#define TUI_FC_HISTORY_EE_START 216
+// 808 bytes before eeprom end, 8 bytes for status data & above stuff, 800 bytes for 100 history entries
+
+struct __attribute__ ((__packed__)) tui_fc_ee_intro {
+	uint8_t count;
+	uint8_t offset;
+	uint16_t fuel_price;
+	uint16_t fuel_eff;
+	uint16_t km;
+};
+
+
+static void tui_fc_history_ee_init(void) {
+	struct tui_fc_ee_intro st;
+	eeprom_read_block(&st,(void*)TUI_FC_HISTORY_EE_START, sizeof(struct tui_fc_ee_intro));
+	if (st.count>TUI_FC_HISTORY_SIZE) return; // Invalid data
+	if (st.offset>=TUI_FC_HISTORY_SIZE) return; // --''--
+	tui_fc_history_count = st.count;
+	tui_fc_history_offset = st.offset;
+	tui_fc_last_fuel_price = st.fuel_price;
+	tui_fc_last_fuel_efficiency = st.fuel_eff;
+	tui_fc_last_kilometres = st.km;
+}
+
+static void tui_fc_history_ee_exit(void) {
+	struct tui_fc_ee_intro st;
+	st.count = tui_fc_history_count;
+	st.offset = tui_fc_history_offset;
+	st.fuel_price = tui_fc_last_fuel_price;
+	st.fuel_eff = tui_fc_last_fuel_efficiency;
+	st.km = tui_fc_last_kilometres;
+	eeprom_update_block(&st,(void*)TUI_FC_HISTORY_EE_START, sizeof(struct tui_fc_ee_intro));
+}
+
+#define TUI_FC_HISTORY_EE_DATA_ADDR (TUI_FC_HISTORY_EE_START+sizeof(struct tui_fc_ee_intro))
+static void tui_fc_history_read_idx(uint8_t idx, struct tui_fc_history_entry *e) {
+	idx += tui_fc_history_offset;
+	if (idx>=TUI_FC_HISTORY_SIZE) idx = idx - TUI_FC_HISTORY_SIZE;
+	eeprom_read_block(e,(void*)TUI_FC_HISTORY_EE_DATA_ADDR+(idx*sizeof(struct tui_fc_history_entry)),sizeof(struct tui_fc_history_entry));
+}
+
+static void tui_fc_history_write_idx(uint8_t idx, struct tui_fc_history_entry *e) {
+	idx += tui_fc_history_offset;
+	if (idx>=TUI_FC_HISTORY_SIZE) idx = idx - TUI_FC_HISTORY_SIZE;
+	eeprom_update_block(e,(void*)TUI_FC_HISTORY_EE_DATA_ADDR+(idx*sizeof(struct tui_fc_history_entry)),sizeof(struct tui_fc_history_entry));
+}	
 
 static void tui_fc_history_del_idx(uint8_t idx) {
 	uint8_t i;
 	if (idx>=tui_fc_history_count) return;
-	for (i=idx+1;i<tui_fc_history_count;i++) {
-		tui_fc_history[i-1] = tui_fc_history[i];
+	if (idx==0) {
+		tui_fc_history_offset++;
+		if (tui_fc_history_offset>=TUI_FC_HISTORY_SIZE) tui_fc_history_offset = 0;
+	} else {
+		for (i=idx+1;i<tui_fc_history_count;i++) {
+			struct tui_fc_history_entry e;
+			tui_fc_history_read_idx(i,&e);
+			tui_fc_history_write_idx(i-1,&e);
+		}
 	}
 	tui_fc_history_count--;
 }
@@ -305,16 +357,19 @@ void tui_calc_fuel_add_history(uint16_t time_days, uint16_t kilometers, uint16_t
 	if (tui_fc_history_count==TUI_FC_HISTORY_SIZE) { // Delete oldest
 		tui_fc_history_del_idx(0);
 	}
-	tui_fc_history[tui_fc_history_count].time_days = time_days;
-	tui_fc_history[tui_fc_history_count].kilometers = kilometers;
-	tui_fc_history[tui_fc_history_count].fuel_price = fuel_price;
-	tui_fc_history[tui_fc_history_count].litres = litres;
+	struct tui_fc_history_entry e;
+	e.time_days = time_days;
+	e.kilometers = kilometers;
+	e.fuel_price = fuel_price;
+	e.litres = litres;
+	tui_fc_history_write_idx(tui_fc_history_count,&e);
 	tui_fc_history_count++;
 }
 
 
 void tui_calc_fuel_cost(void) {
 	struct tcalcstate s = { 0,0,10,1 };
+	tui_fc_history_ee_init();
 	uint32_t km = tui_fc_last_kilometres;
 	uint32_t price = tui_fc_last_fuel_price;
 	uint32_t efficiency = tui_fc_last_fuel_efficiency;
@@ -357,6 +412,7 @@ void tui_calc_fuel_cost(void) {
 	timer_get_time(&tm);
 	lindate = mtm2lindate(&tm);
 	tui_calc_fuel_add_history(lindate,km,price,litres);
+	tui_fc_history_ee_exit();
 }
 
 const unsigned char tui_fchm_name[] PROGMEM = "FC HISTORY";
@@ -388,12 +444,15 @@ PGM_P const tui_fchm_table_m1[] PROGMEM = {
 void tui_calc_fc_history(void) {
 	uint8_t mode=0;
 	uint8_t idx=0;
+	tui_fc_history_ee_init();
 reload:
 	if (tui_fc_history_count==0) {
 		tui_gen_message(PSTR("NO FUEL COST"),PSTR("HISTORY"));
 		return;
 	}
 	for(;;) {
+		struct tui_fc_history_entry e;
+		tui_fc_history_read_idx(idx,&e);
 		struct mtm tm;
 		unsigned char buf[17];
 		unsigned char line[17];
@@ -402,7 +461,7 @@ reload:
 		line[0] = (idx/10)|0x30;
 		line[1] = (idx%10)|0x30;
 		line[2] = ':';
-		lindate2mtm(&tm, tui_fc_history[idx].time_days);
+		lindate2mtm(&tm, e.time_days);
 		tm.year = tm.year % 100;
 		line[3] = (tm.year/10)|0x30;
 		line[4] = (tm.year%10)|0x30;
@@ -411,10 +470,10 @@ reload:
 		line[7] = (tm.day/10)|0x30;
 		line[8] = (tm.day%10)|0x30;
 		if (mode==0) {
-			tui_calc_printno(buf,tui_fc_history[idx].fuel_price,10,3);
+			tui_calc_printno(buf,e.fuel_price,10,3);
 		} else {
-			uint32_t litres = tui_fc_history[idx].litres;
-			uint32_t km = tui_fc_history[idx].kilometers;
+			uint32_t litres = e.litres;
+			uint32_t km = e.kilometers;
 			uint32_t eff = (litres*1000)/km;
 			tui_calc_printno(buf,eff,10,2);
 		}
@@ -423,12 +482,12 @@ reload:
 		lcd_gotoxy(0,0);
 		lcd_puts(line);
 		memset(line,' ',16);
-		tui_calc_printno(buf,tui_fc_history[idx].kilometers,10,1);
+		tui_calc_printno(buf,e.kilometers,10,1);
 		s = strlen((char*)buf);
 		memcpy(line,buf,s);
 		line[s] = 'K';
 		line[s+1] = 'M';
-		tui_calc_printno(buf,tui_fc_history[idx].litres,10,2);
+		tui_calc_printno(buf,e.litres,10,2);
 		s = strlen((char*)buf);
 		memcpy(&(line[15-s]),buf,s);
 		line[15] = 'L';
@@ -454,6 +513,7 @@ reload:
 							return;
 						case 1: // DEL IDX
 							tui_fc_history_del_idx(idx);
+							tui_fc_history_ee_exit();
 							if (idx) idx--;
 							goto reload;
 						case 2: // FLIP MODE

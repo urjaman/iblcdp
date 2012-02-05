@@ -36,6 +36,50 @@ static const uint8_t lcd_eur_sign[8] PROGMEM = {
 	0b00000
 };
 
+static const uint8_t lcd_ul_sign[8] PROGMEM = {
+	0b00000,
+	0b11110,
+	0b11000,
+	0b10100,
+	0b10010,
+	0b00001,
+	0b00000,
+	0b00000
+};
+
+static const uint8_t lcd_ur_sign[8] PROGMEM = {
+	0b00000,
+	0b01111,
+	0b00011,
+	0b00101,
+	0b01001,
+	0b10000,
+	0b00000,
+	0b00000
+};
+
+static const uint8_t lcd_dl_sign[8] PROGMEM = {
+	0b00000,
+	0b00000,
+	0b00001,
+	0b10010,
+	0b10100,
+	0b11000,
+	0b11110,
+	0b00000
+};
+
+static const uint8_t lcd_dr_sign[8] PROGMEM = {
+	0b00000,
+	0b00000,
+	0b10000,
+	0b01001,
+	0b00101,
+	0b00011,
+	0b01111,
+	0b00000
+};
+
 
 /*
  * Setup the LCD controller.  First, call the hardware initialization
@@ -66,8 +110,12 @@ lcd_init(void)
   hd44780_outcmd(HD44780_DISPCTL(1, 0, 0));
   hd44780_wait_ready();
   
-  /* Program CGRAM characters. For now only EUR sign at index 0 (or 8) */
-  lcd_program_char((PGM_P)lcd_eur_sign, 0);
+  /* Program CGRAM characters. */
+  lcd_program_char((PGM_P)lcd_eur_sign, 0); /* EUR sign at index 0 (or 8) */
+  lcd_program_char((PGM_P)lcd_ul_sign,1);   /* UL arrow at index 1 (or 9) */
+  lcd_program_char((PGM_P)lcd_ur_sign,2);   /* UR arrow at index 2 (or 10) */
+  lcd_program_char((PGM_P)lcd_dl_sign,3);   /* DL arrow at index 3 (or 11) */
+  lcd_program_char((PGM_P)lcd_dr_sign,4);   /* DR arrow at index 4 (or 12) */
   
   /* Go to the corner... */
   lcd_gotoxy(0,0);

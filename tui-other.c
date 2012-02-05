@@ -14,10 +14,12 @@
 const unsigned char tui_dm_s1[] PROGMEM = "UPTIME";
 const unsigned char tui_dm_s2[] PROGMEM = "RTC INFO";
 const unsigned char tui_dm_s3[] PROGMEM = "ADC SAMPLES/S";
+const unsigned char tui_dm_s4[] PROGMEM = "5HZ COUNTER";
 PGM_P const tui_dm_table[] PROGMEM = {
     (PGM_P)tui_dm_s1, // uptime
     (PGM_P)tui_dm_s2, // rtc info
     (PGM_P)tui_dm_s3, // adc samples
+    (PGM_P)tui_dm_s4, // 5hz counter
     (PGM_P)tui_exit_menu, // exit
 };
 
@@ -105,11 +107,27 @@ static void tui_adc_ss(void) {
 	}
 }
 
+static void tui_timer_5hzcnt(void) {
+	unsigned char buf[10];
+	for (;;) {
+		uint8_t x;
+		uint8_t timer=timer_get_5hz_cnt();
+		lcd_clear();
+		uchar2str(buf,timer);
+		lcd_puts(buf);
+		while (timer==timer_get_5hz_cnt()) {
+			x = buttons_get();
+			mini_mainloop();
+			if (x) return;
+		}
+	}
+}	
+
 const unsigned char tui_om_s5[] PROGMEM = "DEBUG INFO";
 static void tui_debuginfomenu(void) {
 	uint8_t sel=0;	
 	for (;;) {
-		sel = tui_gen_listmenu((PGM_P)tui_om_s5, tui_dm_table, 4, sel);
+		sel = tui_gen_listmenu((PGM_P)tui_om_s5, tui_dm_table, 5, sel);
 		switch (sel) {
 			case 0:
 				tui_uptime();
@@ -125,6 +143,9 @@ static void tui_debuginfomenu(void) {
 				break;
 			case 2: 
 				tui_adc_ss();
+				break;
+			case 3:
+				tui_timer_5hzcnt();
 				break;
 			default:
 				return;
@@ -150,6 +171,7 @@ static void tui_stopwatch(void) {
 		mini_mainloop();
 		if (buttons_get_v()) break;
 	}
+	uint8_t last_5hztimer = timer_get_5hz_cnt();
 	time[6] = time[4] = time[3] = time[1] = time[0] = '0';
 	time[2] = ':';
 	time[5] = '.';
@@ -159,22 +181,22 @@ static void tui_stopwatch(void) {
 	timer_delay_ms(150);
 	for(;;) {
 		mini_mainloop();
-		if (timer_get_5hzp()) {
-			if (timer_get_1hzp()) backlight_activate(); // Keep backlight on
-			uint16_t tt,t2;
-			timer += 2;
-			if (timer>=60000) timer=0;
-			time[6] = 0x30 | (timer%10);
-			tt = timer/10;
-			t2 = tt%60;
-			tt = tt/60;
-			time[4] = 0x30 | (t2%10);
-			time[3] = 0x30 | (t2/10);
-			time[1] = 0x30 | (tt%10);
-			time[0] = 0x30 | (tt/10);
-			lcd_gotoxy(4,1);
-			lcd_puts(time);
-		}
+		if (timer_get_1hzp()) backlight_activate(); // Keep backlight on
+		uint16_t tt,t2;
+		uint8_t passed = timer_get_5hz_cnt() - last_5hztimer;
+		timer += passed*2;
+		last_5hztimer += passed;
+		if (timer>=60000) timer=0;
+		time[6] = 0x30 | (timer%10);
+		tt = timer/10;
+		t2 = tt%60;
+		tt = tt/60;
+		time[4] = 0x30 | (t2%10);
+		time[3] = 0x30 | (t2/10);
+		time[1] = 0x30 | (tt%10);
+		time[0] = 0x30 | (tt/10);
+		lcd_gotoxy(4,1);
+		lcd_puts(time);
 		if (buttons_get_v()) break;
 	}
 	tui_waitforkey();

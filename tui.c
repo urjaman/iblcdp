@@ -10,9 +10,16 @@
 #include "tui.h"
 #include "time.h"
 
+#include "dallas.h"
+
+
 uint8_t tui_mp_mods[4][TUI_MODS_MAXDEPTH];
 static uint8_t tui_mp_modidx[4];
 static uint8_t tui_force_draw;
+static uint8_t tui_next_refresh; 
+static uint8_t tui_refresh_interval=TUI_DEFAULT_REFRESH_INTERVAL; // by default 1s
+
+
 
 uint8_t tui_pollkey(void) {
 	uint8_t v = buttons_get();
@@ -28,38 +35,7 @@ uint8_t tui_waitforkey(void) {
 	}
 }
 
-static void tui_draw_mainpage(void) {
-	uint8_t d;
-	unsigned char line[17];
-	unsigned char buf[16];
-	line[16]=0;
-	if ((timer_get()&0x1)&&(timer_get_1hzp())) {
-		uint8_t i;
-		for (i=0;i<4;i++) {
-			uint8_t c = tui_mp_modidx[i] + 1;
-			if (c >= TUI_MODS_MAXDEPTH) c=0;
-			if (tui_mp_mods[i][c] == 255) c=0;
-			tui_mp_modidx[i] = c;
-		}
-	}
-	// Line 0
-	memset(line,' ',16);
-	d = tui_run_mod(tui_mp_mods[0][tui_mp_modidx[0]],buf,8);
-	memcpy(line,buf,d);
-	d = tui_run_mod(tui_mp_mods[1][tui_mp_modidx[1]],buf,15-d);
-	memcpy(&(line[16-d]),buf,d);
-	lcd_gotoxy(0,0);
-	lcd_puts(line);
-	// Line 1
-	memset(line,' ',16);
-	d = tui_run_mod(tui_mp_mods[2][tui_mp_modidx[2]],buf,8);
-	memcpy(line,buf,d);
-	d = tui_run_mod(tui_mp_mods[3][tui_mp_modidx[3]],buf,15-d);
-	memcpy(&(line[16-d]),buf,d);
-	lcd_gotoxy(0,1);
-	lcd_puts(line);
-	tui_force_draw = 0;
-}
+
 
 void tui_gen_menuheader(unsigned char* line, unsigned char* buf, PGM_P header) {
 	uint8_t y,z;
@@ -109,46 +85,16 @@ uint8_t tui_gen_listmenu(PGM_P header, PGM_P const menu_table[], uint8_t itemcnt
 	return tui_pgm_menupart(line,buf,menu_table,itemcnt,start);
 }
 
-static uint16_t tui_gen_voltmenu(PGM_P header, uint16_t start) {
+int32_t tui_gen_adjmenu(PGM_P header, printval_func_t *printer,int32_t min, int32_t max, int32_t start, int32_t step) {
 	unsigned char line[17];
 	unsigned char buf[17];
-	uint16_t idx=adc_to_dV(start);
-	tui_gen_menuheader(line,buf,header);
-	memset(line,' ',16);
-	lcd_gotoxy(0,1);
-	lcd_puts(line);
-	for(;;) {
-		uint8_t key;
-		adc_print_dV(buf,idx);
-		lcd_gotoxy(5,1);
-		lcd_puts(buf);
-		key = tui_waitforkey();
-		switch (key) {
-			case BUTTON_S1:
-				idx++;
-				if (idx>=1600) idx=0;
-				break;
-			case BUTTON_S2:
-				if (idx) idx--;
-				else idx = 1599;
-				break;
-			case BUTTON_BOTH:
-				return adc_from_dV(idx);
-		}
-	}
-}
-
-uint16_t tui_gen_nummenu(PGM_P header, uint16_t min, uint16_t max, uint16_t start) {
-	unsigned char line[17];
-	unsigned char buf[17];
-	uint16_t idx=start;
+	int32_t idx=start;
 	uint8_t z,y;
 	tui_gen_menuheader(line,buf,header);
 	for (;;) {
 		uint8_t key;
-		uint2str(buf,idx);
+		y = printer(buf,idx);
 		memset(line,' ',16);
-		y = strlen((char*)buf);
 		z = (16 - y) / 2;
 		memcpy(&(line[z]),buf,y);
 		lcd_gotoxy(0,1);
@@ -156,18 +102,38 @@ uint16_t tui_gen_nummenu(PGM_P header, uint16_t min, uint16_t max, uint16_t star
 		key = tui_waitforkey();
 		switch (key) {
 			case BUTTON_S1:
-				if (idx == max) idx = min;
-				else idx++;
+				if ((idx+step) > max) idx = min;
+				else idx += step;
 				break;
 			case BUTTON_S2:
-				if (idx == min) idx = max;
-				else idx--;
+				if ((idx-step) < min) idx = max;
+				else idx -= step;
 				break;
 			case BUTTON_BOTH:
 				return idx;
 		}
 	}
 }
+
+static uint8_t tui_voltmenu_printer(unsigned char* buf, int32_t val) {
+	adc_print_dV(buf,(uint16_t)val);
+	return strlen((char*)buf);
+}
+
+static uint16_t tui_gen_voltmenu(PGM_P header, uint16_t start) {
+	return adc_from_dV( 
+		tui_gen_adjmenu(header,tui_voltmenu_printer,0,1600,adc_to_dV(start),1)
+		);
+}
+
+static uint8_t tui_nummenu_printer(unsigned char* buf, int32_t val) {
+	return uint2str(buf,(uint16_t)val);
+}
+
+uint16_t tui_gen_nummenu(PGM_P header, uint16_t min, uint16_t max, uint16_t start) {
+	return (uint16_t)tui_gen_adjmenu(header,tui_nummenu_printer,min,max,start,1);
+}
+
 
 void tui_gen_message(PGM_P l1, PGM_P l2) {
 	lcd_clear();
@@ -226,34 +192,13 @@ static inline void tui_set_contrast(uint8_t c) {
 	backlight_set_contrast(contrast_max-c);
 }
 
+static uint8_t tui_contrast_set_util_printer(unsigned char* buf, int32_t val) {
+	tui_set_contrast((uint8_t)val);
+	return uchar2str(buf,(uint8_t)val);
+}
+
 static void tui_contrast_set_util(void) {
-	unsigned char line[17];
-	unsigned char buf[17];
-	uint8_t idx=tui_get_contrast(), z,y;
-	
-	tui_gen_menuheader(line,buf,(PGM_P)tui_blsm_s4);
-	for (;;) {
-		uint8_t key;
-		uchar2str(buf,idx);
-		memset(line,' ',16);
-		y = strlen((char*)buf);
-		z = (16 - y) / 2;
-		memcpy(&(line[z]),buf,y);
-		lcd_gotoxy(0,1);
-		lcd_puts(line);
-		key = tui_waitforkey();
-		switch (key) {
-			case BUTTON_S1:
-				if (idx != contrast_max) idx++;
-				break;
-			case BUTTON_S2:
-				if (idx != contrast_min) idx--;
-				break;
-			case BUTTON_BOTH:
-				return;
-		}
-		tui_set_contrast(idx);
-	}
+	tui_gen_adjmenu((PGM_P)tui_blsm_s4,tui_contrast_set_util_printer,contrast_min,contrast_max,tui_get_contrast(),1);
 }
 
 static void tui_blsettingmenu(void) {
@@ -283,8 +228,7 @@ static void tui_blsettingmenu(void) {
 			tui_contrast_set_util();
 			break;
 			
-
-			case 4:
+			default:
 			return;
 		}
 	}
@@ -372,7 +316,7 @@ static void tui_settingsmenu(void) {
 			tui_gen_message((PGM_P)tui_sm_name,PSTR("LOADED"));
 			return;
 
-			case 7:
+			default:
 			return;
 		}
 	}
@@ -406,12 +350,51 @@ static void tui_mainmenu(void) {
 				tui_othermenu();
 				break;
 			default:
-			case 3:
 				return;
 		}
 	}
 }
 
+static void tui_draw_mainpage(uint8_t forced) {
+	uint8_t d;
+	unsigned char line[17];
+	unsigned char buf[16];
+	line[16]=0;
+	if (!forced) {
+		static uint8_t drawcnt=0;
+		drawcnt++;
+		if ((drawcnt&1)==0) {
+			uint8_t i;
+			for (i=0;i<4;i++) {
+				uint8_t c = tui_mp_modidx[i] + 1;
+				if (c >= TUI_MODS_MAXDEPTH) c=0;
+				if (tui_mp_mods[i][c] == 255) c=0;
+				tui_mp_modidx[i] = c;
+			}
+		}
+	}
+	// Line 0
+	memset(line,' ',16);
+	d = tui_run_mod(tui_mp_mods[0][tui_mp_modidx[0]],buf,8);
+	memcpy(line,buf,d);
+	d = tui_run_mod(tui_mp_mods[1][tui_mp_modidx[1]],buf,15-d);
+	memcpy(&(line[16-d]),buf,d);
+	lcd_gotoxy(0,0);
+	lcd_puts(line);
+	// Line 1
+	memset(line,' ',16);
+	d = tui_run_mod(tui_mp_mods[2][tui_mp_modidx[2]],buf,8);
+	memcpy(line,buf,d);
+	d = tui_run_mod(tui_mp_mods[3][tui_mp_modidx[3]],buf,15-d);
+	memcpy(&(line[16-d]),buf,d);
+	lcd_gotoxy(0,1);
+	lcd_puts(line);
+	tui_force_draw = 0;
+	if (!forced) {
+		tui_refresh_interval = tui_update_refresh_interval();
+		tui_next_refresh = timer_get_5hz_cnt()+tui_refresh_interval;
+	}
+}
 
 void tui_init(void) {
 	uint8_t i;
@@ -422,10 +405,10 @@ void tui_init(void) {
 		}
 	}
 	tui_mp_mods[0][0] = 0; // Main Bat
-	tui_mp_mods[1][0] = 7; // Temp 0
+	tui_mp_mods[1][0] = 6; // Temp 0
 	tui_mp_mods[2][0] = 1; // Sec Bat
 	tui_mp_mods[3][0] = 2; // Relay State
-	tui_draw_mainpage();
+	tui_draw_mainpage(0);
 }
 
 
@@ -433,12 +416,21 @@ void tui_run(void) {
 	uint8_t k = buttons_get();
 	if (k & BUTTON_S2) {
 		tui_mainmenu();
-		tui_draw_mainpage();
+		tui_draw_mainpage(1);
 		return;
 	} else {
-		if ((timer_get_1hzp())||(tui_force_draw))
-			tui_draw_mainpage();
-		return;
+		if (tui_force_draw) {
+			tui_draw_mainpage(tui_force_draw);
+			return;
+		} else {
+			if (timer_get_5hzp()) {
+				signed char update = (signed char)(timer_get_5hz_cnt() - tui_next_refresh);
+				if (update>=0) {
+					tui_draw_mainpage(0);
+					return;
+				}
+			}
+		}
 	}
 }
 

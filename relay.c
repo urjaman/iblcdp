@@ -12,6 +12,7 @@ static uint16_t relay_auto_voltage;
 static uint32_t relay_last_act_sec;
 static uint8_t relay_auto_keep_on;
 static uint8_t relay_last_autodecision;
+static uint8_t relay_ext_state=RLY_MODE_OFF;
 
 static void relay_clr_thinkstack(void) {
 	uint8_t i;
@@ -35,11 +36,11 @@ void relay_set(uint8_t mode) {
 	switch (mode) {
 		default:
 		case RLY_MODE_OFF:
-			relay_mode = RLY_MODE_OFF;
+			relay_ext_state = relay_mode = RLY_MODE_OFF;
 			PORTC &= ~_BV(3);
 			break;
 		case RLY_MODE_ON:
-			relay_mode = RLY_MODE_ON;
+			relay_ext_state = relay_mode = RLY_MODE_ON;
 			PORTC |= _BV(3);
 			break;
 		case RLY_MODE_AUTO:
@@ -59,8 +60,12 @@ void relay_set_keepon(uint8_t v) {
 }
 
 
-uint8_t relay_get(void) {
+static uint8_t relay_int_get(void) {
 	return (PINC&_BV(3)) ? RLY_MODE_ON : RLY_MODE_OFF;
+}
+
+uint8_t relay_get(void) {
+	return relay_ext_state;
 }
 
 uint8_t relay_get_mode(void) {
@@ -97,10 +102,13 @@ static uint8_t relay_auto_think(void) {
 
 void relay_run(void) {
 	uint8_t r = relay_auto_think();
+	if (timer_get_1hzp()) { // Propagate ext relay state here
+		if (relay_ext_state != relay_int_get()) tui_activate(); // refresh data onscreen now that we have updated it
+		relay_ext_state = relay_int_get();
+	}
 	if ((r)&&(relay_mode == RLY_MODE_AUTO)) {
-		if (relay_last_autodecision != relay_get()) {
+		if (relay_last_autodecision != relay_int_get()) {
 			backlight_activate(); // Something to show off
-			tui_activate(); // refresh data onscreen when possible
 			relay_last_act_sec = timer_get();
 			if (relay_last_autodecision == RLY_MODE_ON) {
 				PORTC |= _BV(3);

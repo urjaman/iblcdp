@@ -66,25 +66,26 @@ uint8_t tui_run_mod(uint8_t mod, uint8_t *p, uint8_t ml) {
 	}
 }
 
-static const unsigned char tui_modsetm_s1[] PROGMEM = "SET UL MODULE";
-static const unsigned char tui_modsetm_s2[] PROGMEM = "SET UR MODULE";
-static const unsigned char tui_modsetm_s3[] PROGMEM = "SET DL MODULE";
-static const unsigned char tui_modsetm_s4[] PROGMEM = "SET DR MODULE";
-static const unsigned char tui_modsetm_s5[] PROGMEM = "EXIT MENU";
+static const unsigned char tui_modsetm_s1[] PROGMEM = "SET UL MODULE \x01";
+static const unsigned char tui_modsetm_s2[] PROGMEM = "SET UR MODULE \x02";
+static const unsigned char tui_modsetm_s3[] PROGMEM = "SET DL MODULE \x03";
+static const unsigned char tui_modsetm_s4[] PROGMEM = "SET DR MODULE \x04";
+const unsigned char tui_update_rate_cfg[] PROGMEM = "UPDATE RATE CFG"; // external to tui-temp.c
 
 PGM_P const tui_modsetm_table[] PROGMEM = { // TUI config menu 
     (PGM_P)tui_modsetm_s1,
     (PGM_P)tui_modsetm_s2,
     (PGM_P)tui_modsetm_s3,
     (PGM_P)tui_modsetm_s4,
-    (PGM_P)tui_modsetm_s5
+    (PGM_P)tui_update_rate_cfg,
+    (PGM_P)tui_exit_menu
 };
 
 
 void tui_config_menu(void) {
 	uint8_t sel=0, d=0;
 	for(;;) {
-		sel = tui_gen_listmenu(PSTR("TUI CONFIG"), tui_modsetm_table, 5, sel);
+		sel = tui_gen_listmenu(PSTR("TUI CONFIG"), tui_modsetm_table, 6, sel);
 		switch (sel) {
 			case 0:
 			case 1:
@@ -94,6 +95,10 @@ void tui_config_menu(void) {
 				tui_mp_mods[sel][d] = tui_select_mod(tui_mp_mods[sel][d]);
 				break;
 			case 4:
+				tui_refresh_interval_menu();
+				break;
+			
+			default:
 				return;
 		}
 	}
@@ -242,10 +247,10 @@ static uint8_t tui_amp_mod(uint8_t* buf, uint8_t ml) {
 	return tui_modfinish(buf,mb,ml,3);
 }
 
-static uint8_t tui_temp_mod(uint8_t* buf, uint8_t ml, uint8_t idx) {
-	int16_t t = dallas_temp_get(idx); 
+uint8_t tui_temp_printer(unsigned char* mb, int32_t val) {
+	int16_t t = val;
 	uint16_t tt = abs(t);
-	uint8_t mb[6], acv[3];
+	uint8_t acv[3];
 	// -XX.XC - negative == -55.0C .. -00.5C ; when -9.5 .. -0.5 we cut the extra zero
 	// XX.X*C - positive == 00.0*C .. 84.5C ; when 0.0 ... 9.5 we cut the extra zero
 	// --.-*C - other values
@@ -262,9 +267,10 @@ static uint8_t tui_temp_mod(uint8_t* buf, uint8_t ml, uint8_t idx) {
 		mb[4] = acv[2];
 		if (acv[0] == '0') {
 			mb[1] = '-';
-			return tui_modfinish(buf,&(mb[1]),ml,5);
+			for (uint8_t i=0;i<5;i++) mb[i] = mb[i+1];
+			return 5;
 		} else {
-			return tui_modfinish(buf,mb,ml,6);
+			return 6;
 		}
 	}
 	mb[4] = 0xB0;
@@ -274,12 +280,20 @@ static uint8_t tui_temp_mod(uint8_t* buf, uint8_t ml, uint8_t idx) {
 		mb[1] = acv[1];
 		mb[3] = acv[2];
 		if (acv[0] == '0') {
-			return tui_modfinish(buf,&(mb[1]),ml,5);
+			for (uint8_t i=0;i<5;i++) mb[i] = mb[i+1];
+			return 5;
 		} else {
-			return tui_modfinish(buf,mb,ml,6);
+			return 6;
 		}
 	}
 	mb[0] = mb[1] = mb[3] = '-';
-	return tui_modfinish(buf,mb,ml,6);
+	return 6;
+}
+	
+static uint8_t tui_temp_mod(uint8_t* buf, uint8_t ml, uint8_t idx) {
+	int16_t t = dallas_temp_get(idx); 
+	uint8_t mb[6];
+	uint8_t x = tui_temp_printer(mb,t);
+	return tui_modfinish(buf,mb,ml,x);
 }
 

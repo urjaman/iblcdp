@@ -1,14 +1,13 @@
 #ifndef _TUI_H_
 #define _TUI_H_
 
-#define TUI_MODS_MAXDEPTH 4
-
-// This exported for saver and tui-modules.c
-extern uint8_t tui_mp_mods[4][TUI_MODS_MAXDEPTH];
-
 void tui_init(void);
 void tui_run(void);
 void tui_activate(void);
+
+// This exported for saver and tui-modules.c
+#define TUI_MODS_MAXDEPTH 4
+extern uint8_t tui_mp_mods[4][TUI_MODS_MAXDEPTH];
 
 // These are for tui-*.c:
 uint8_t tui_pollkey(void);
@@ -21,8 +20,11 @@ uint16_t tui_gen_nummenu(PGM_P header, uint16_t min, uint16_t max, uint16_t star
 void tui_gen_menuheader(unsigned char* line, unsigned char* buf, PGM_P header);
 void tui_set_clock(void);
 
-extern const unsigned char tui_exit_menu[];
+typedef uint8_t printval_func_t(unsigned char*,int32_t);
 
+int32_t tui_gen_adjmenu(PGM_P header, printval_func_t *printer,int32_t min, int32_t max, int32_t start, int32_t step);
+
+extern const unsigned char tui_exit_menu[];
 
 /* tui-other.c */
 void tui_othermenu(void);
@@ -30,6 +32,13 @@ void tui_othermenu(void);
 /* tui-modules.c */
 uint8_t tui_run_mod(uint8_t mod, uint8_t *p, uint8_t ml);
 void tui_config_menu(void);
+extern const unsigned char tui_update_rate_cfg[]; // for tui-temp.c
+uint8_t tui_temp_printer(unsigned char* mb, int32_t val);
+
+/* tui-temp.c */
+#define TUI_DEFAULT_REFRESH_INTERVAL 5
+uint8_t tui_update_refresh_interval(void);
+void tui_refresh_interval_menu(void);
 
 
 /* tui-calc.c */
@@ -40,7 +49,7 @@ void tui_calc_fc_history(void);
 // This is maximum supported by the FC history viewer. Also note that this is 800 bytes of RAM usage.
 #define TUI_FC_HISTORY_SIZE 100
 
-struct tui_fc_history_entry {
+struct __attribute__ ((__packed__)) tui_fc_history_entry {
 	uint16_t time_days; // lindate
 	uint16_t kilometers; // *10
 	uint16_t fuel_price; // *1000
@@ -48,8 +57,9 @@ struct tui_fc_history_entry {
 };
 
 extern uint8_t tui_fc_history_count;
-extern struct tui_fc_history_entry tui_fc_history[TUI_FC_HISTORY_SIZE];
 extern uint16_t tui_fc_last_fuel_price;
 extern uint16_t tui_fc_last_fuel_efficiency; // l/100km*100
 extern uint16_t tui_fc_last_kilometres; // 300km*10
+
+
 #endif

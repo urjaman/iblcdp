@@ -179,26 +179,14 @@ PGM_P const tui_blsm_table[] PROGMEM = { // BL Settings Menu
 	(PGM_P)tui_exit_menu
 };
 
-const uint8_t contrast_max = 64;
-const uint8_t contrast_min = 0;
-static inline uint8_t tui_get_contrast(void) {
-	uint8_t c = backlight_get_contrast();
-	if (c>contrast_max) return 0;
-	return contrast_max - c;
-}
-
-static inline void tui_set_contrast(uint8_t c) {
-	if (c>contrast_max) c = contrast_max;
-	backlight_set_contrast(contrast_max-c);
-}
 
 static uint8_t tui_contrast_set_util_printer(unsigned char* buf, int32_t val) {
-	tui_set_contrast((uint8_t)val);
+	backlight_set_contrast((uint8_t)val);
 	return uchar2str(buf,(uint8_t)val);
 }
 
 static void tui_contrast_set_util(void) {
-	tui_gen_adjmenu((PGM_P)tui_blsm_s4,tui_contrast_set_util_printer,contrast_min,contrast_max,tui_get_contrast(),1);
+	tui_gen_adjmenu((PGM_P)tui_blsm_s4,tui_contrast_set_util_printer,CONTRAST_MIN,CONTRAST_MAX,backlight_get_contrast(),1);
 }
 
 static void tui_blsettingmenu(void) {

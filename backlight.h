@@ -9,3 +9,5 @@ uint8_t backlight_get_dv(void);
 uint8_t backlight_get_to(void);
 void backlight_set_contrast(uint8_t contrast);
 uint8_t backlight_get_contrast(void);
+#define CONTRAST_MAX 64
+#define CONTRAST_MIN 0

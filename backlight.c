@@ -69,16 +69,17 @@ ret:
 }
 
 void backlight_init(void) {
+	const uint8_t backlight_default = 14;
 	DDRD |= _BV(5); // CONTRAST
 	DDRD |= _BV(6); // BACKLIGHT
 	TCCR0A = _BV(COM0A1) | _BV(COM0B1) | _BV(WGM01) | _BV(WGM00);
 	TCCR0B = _BV(CS00);
-	bl_to = 15;
-	backlight_set(16);
-	backlight_simple_set(16);
-	bl_v_fadeto = 16;
-	bl_drv_value = 10;
-	backlight_set_contrast(5); // 0.1V
+	bl_to = 30;
+	backlight_set(backlight_default);
+	backlight_simple_set(backlight_default);
+	bl_v_fadeto = backlight_default;
+	bl_drv_value = 7;
+	backlight_set_contrast(59); // 0.1V
 }
 
 void backlight_set(uint8_t v) {
@@ -134,11 +135,15 @@ void backlight_run(void) {
 	backlight_fader();
 }
 
-void backlight_set_contrast(uint8_t contrast) {
-	bl_contrast_value = contrast;
-	OCR0B = contrast;
+void backlight_set_contrast(uint8_t c) {
+	if (c>CONTRAST_MAX) c = CONTRAST_MAX;
+	c = CONTRAST_MAX - c;
+	bl_contrast_value = c;
+	OCR0B = c;
 }
 
 uint8_t backlight_get_contrast(void) {
-	return bl_contrast_value;
+	uint8_t c = bl_contrast_value;
+	if (c>CONTRAST_MAX) return 0;
+	return CONTRAST_MAX - c;
 }

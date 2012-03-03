@@ -19,9 +19,7 @@ void tui_gen_message(PGM_P l1, PGM_P l2);
 uint16_t tui_gen_nummenu(PGM_P header, uint16_t min, uint16_t max, uint16_t start);
 void tui_gen_menuheader(unsigned char* line, unsigned char* buf, PGM_P header);
 void tui_set_clock(void);
-
 typedef uint8_t printval_func_t(unsigned char*,int32_t);
-
 int32_t tui_gen_adjmenu(PGM_P header, printval_func_t *printer,int32_t min, int32_t max, int32_t start, int32_t step);
 
 extern const unsigned char tui_exit_menu[];
@@ -34,6 +32,7 @@ uint8_t tui_run_mod(uint8_t mod, uint8_t *p, uint8_t ml);
 void tui_config_menu(void);
 extern const unsigned char tui_update_rate_cfg[]; // for tui-temp.c
 uint8_t tui_temp_printer(unsigned char* mb, int32_t val);
+void tui_num_helper(unsigned char* buf, uint8_t n); // Prints 00-99 to buf. No terminator.
 
 /* tui-temp.c */
 #define TUI_DEFAULT_REFRESH_INTERVAL 5
@@ -46,7 +45,7 @@ void tui_calc(void);
 void tui_calc_fuel_cost(void);
 void tui_calc_fc_history(void);
 
-// This is maximum supported by the FC history viewer. Also note that this is 800 bytes of RAM usage.
+// This is maximum supported by the FC history viewer.
 #define TUI_FC_HISTORY_SIZE 100
 
 struct __attribute__ ((__packed__)) tui_fc_history_entry {
@@ -61,5 +60,10 @@ extern uint16_t tui_fc_last_fuel_price;
 extern uint16_t tui_fc_last_fuel_efficiency; // l/100km*100
 extern uint16_t tui_fc_last_kilometres; // 300km*10
 
+
+/* tui-alarm.c if ALARMCLOCK */
+void tui_alarm_run(void);
+void tui_alarm_menu(void);
+uint8_t tui_alarm_mod_str(uint8_t *buf);
 
 #endif

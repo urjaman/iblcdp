@@ -24,6 +24,14 @@
 #error "LCD_MAXY > 2 not supported, yet."
 #endif
 
+#define LCD_LOCKBUF_BYTES (LCD_MAXY*LCD_MAXX)
+
+static uint8_t lcd_locked = 0;
+static uint8_t lcd_lock_x = 0;
+static uint8_t lcd_lock_y = 0;
+static uint8_t lcd_x = 0;
+static uint8_t lcd_y = 0;
+static uint8_t* lcd_lock_buf;
 
 static const uint8_t lcd_eur_sign[8] PROGMEM = {
 	0b00111,
@@ -123,8 +131,16 @@ lcd_init(void)
 }
 
 void lcd_gotoxy(uint8_t x, uint8_t y) {
-	uint8_t addr;
-	addr = 0;
+	uint8_t addr = 0;
+	if (y>=LCD_MAXY) y=0;
+	if (x>=LCD_MAXX) x=0;
+	if (lcd_locked) {
+		lcd_lock_x = x;
+		lcd_lock_y = y;
+		return;
+	}
+	lcd_x = x;
+	lcd_y = y;
 	if (y) addr = 0x40;
 	addr += x;
 	hd44780_wait_ready();
@@ -133,12 +149,23 @@ void lcd_gotoxy(uint8_t x, uint8_t y) {
 
 
 void lcd_clear(void) {
+	if (lcd_locked) {
+		for (uint8_t i=0;i<LCD_LOCKBUF_BYTES;i++) lcd_lock_buf[i] = 0x20;
+		lcd_gotoxy(0,0);
+		return;
+	}
 	hd44780_wait_ready();
 	hd44780_outcmd(HD44780_CLR);
 	lcd_gotoxy(0,0);
-	}
+}
 
 void lcd_putchar(unsigned char c) {
+      if (lcd_locked) {
+	lcd_lock_buf[lcd_lock_y*LCD_MAXX+lcd_lock_x] = c;
+	lcd_lock_x++;
+	return;
+      }
+      lcd_x++;
       hd44780_wait_ready();
       hd44780_outdata(c);
 }
@@ -160,7 +187,7 @@ start:
 	str++;
 	goto start;
 	}
-	
+
 void lcd_program_char(PGM_P data, uint8_t index) {
 	hd44780_wait_ready();
 	hd44780_outcmd(HD44780_CGADDR(index<<3));
@@ -170,4 +197,33 @@ void lcd_program_char(PGM_P data, uint8_t index) {
 		data++;
 	}
 }
-		
+
+
+void lcd_lock(uint8_t init, unsigned char* buf) {
+	if (init) {
+		lcd_lock_x = lcd_x;
+		lcd_lock_y = lcd_y;
+		for (uint8_t y=0;y<LCD_MAXY;y++) {
+			lcd_gotoxy(0,y);
+			for (uint8_t x=0;x<LCD_MAXX;x++) {
+				hd44780_wait_ready();
+				buf[y*LCD_MAXX+x] = hd44780_indata();
+			}
+		}
+	}
+	lcd_lock_buf = buf;
+	lcd_locked = 1;
+}
+
+void lcd_unlock(uint8_t restore) {
+	lcd_locked = 0;
+	if (restore) {
+		for (uint8_t y=0;y<LCD_MAXY;y++) {
+			lcd_gotoxy(0,y);
+			for(uint8_t x=0;x<LCD_MAXX;x++) {
+				lcd_putchar(lcd_lock_buf[y*LCD_MAXX+x]);
+			}
+		}
+		lcd_gotoxy(lcd_lock_x,lcd_lock_y);
+	}
+}

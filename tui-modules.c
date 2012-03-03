@@ -6,7 +6,7 @@
 #include "dallas.h"
 #include "batlvl.h"
 
-#define TUI_MOD_CNT 10
+#define TUI_MOD_CNT 12
 static uint8_t tui_mbv_mod(uint8_t* buf, uint8_t max);
 static uint8_t tui_sbv_mod(uint8_t* buf, uint8_t max);
 static uint8_t tui_rlst_mod(uint8_t* buf, uint8_t max);
@@ -15,7 +15,8 @@ static uint8_t tui_dif_mod(uint8_t* buf, uint8_t ml);
 static uint8_t tui_amp_mod(uint8_t* buf, uint8_t ml);
 static uint8_t tui_temp_mod(uint8_t* buf, uint8_t ml, uint8_t idx);
 static uint8_t tui_soc_mod(uint8_t* buf, uint8_t ml, uint8_t c, uint8_t soc);
-
+static uint8_t tui_date_mod(uint8_t* buf, uint8_t ml);
+static uint8_t tui_alarm_mod(uint8_t* buf, uint8_t ml);
 
 static const unsigned char nullstr[] PROGMEM = "-NONE-";
 static const unsigned char mbistr[] PROGMEM = "MAIN BAT VOLTS";
@@ -28,6 +29,8 @@ static const unsigned char temp0str[] PROGMEM = "TEMP SENSOR 0";
 static const unsigned char temp1str[] PROGMEM = "TEMP SENSOR 1";
 static const unsigned char mbsocstr[] PROGMEM = "MAIN BAT SoC";
 static const unsigned char sbsocstr[] PROGMEM = "SEC BAT SoC";
+static const unsigned char datestr[] PROGMEM = "DATE YY-MM-DD";
+static const unsigned char alarmstr[] PROGMEM = "ALARM INFO";
 
 PGM_P const tui_mods_table[] PROGMEM = {
     (PGM_P)nullstr,
@@ -41,6 +44,8 @@ PGM_P const tui_mods_table[] PROGMEM = {
     (PGM_P)temp1str,
     (PGM_P)mbsocstr,
     (PGM_P)sbsocstr,
+    (PGM_P)datestr,
+    (PGM_P)alarmstr
 };
 
 uint8_t tui_select_mod(uint8_t sel) {
@@ -63,6 +68,8 @@ uint8_t tui_run_mod(uint8_t mod, uint8_t *p, uint8_t ml) {
 		case 7: return tui_temp_mod(p,ml,1);
 		case 8: return tui_soc_mod(p,ml,'M',batlvl_get_mb());
 		case 9: return tui_soc_mod(p,ml,'S',batlvl_get_sb());
+		case 10: return tui_date_mod(p,ml);
+		case 11: return tui_alarm_mod(p,ml);
 	}
 }
 
@@ -172,13 +179,15 @@ static uint8_t tui_rlst_mod(uint8_t* buf, uint8_t ml) {
 	return tui_modfinish(buf,mb,ml,5);
 }
 
+void tui_num_helper(unsigned char* buf, uint8_t n) {
+	buf[0] = n/10|0x30;
+	buf[1] = n%10|0x30;
+}
 
 static void tui_drawtime(unsigned char* line, uint8_t h, uint8_t m) {
-	line[0] = h/10|0x30;
-	line[1] = h%10|0x30;
+	tui_num_helper(line,h);
 	line[2] = ':';
-	line[3] = m/10|0x30;
-	line[4] = m%10|0x30;
+	tui_num_helper(line+3,m);
 }
 
 static uint8_t tui_clk24_mod(uint8_t* buf, uint8_t ml) {
@@ -187,6 +196,23 @@ static uint8_t tui_clk24_mod(uint8_t* buf, uint8_t ml) {
 	timer_get_time(&tm);
 	tui_drawtime(mb,tm.hour,tm.min);
 	return tui_modfinish(buf,mb,ml,5);
+}
+
+static uint8_t tui_date_mod(uint8_t* buf, uint8_t ml) {
+	struct mtm tm;
+	uint8_t mb[8];
+	timer_get_time(&tm);
+	tm.year = (((uint16_t)tm.year) + TIME_EPOCH_YEAR) % 100;
+	tui_num_helper(mb,tm.year);
+	mb[2] = '-';
+	tui_num_helper(mb+3,tm.month);
+	mb[5] = '-';
+	tui_num_helper(mb+6,tm.day);
+	if (ml<8) { // provide alternative 5-length MM-DD
+		return tui_modfinish(buf,mb+3,ml,5);
+	} else {
+		return tui_modfinish(buf,mb,ml,8);
+	}
 }
 
 
@@ -297,3 +323,8 @@ static uint8_t tui_temp_mod(uint8_t* buf, uint8_t ml, uint8_t idx) {
 	return tui_modfinish(buf,mb,ml,x);
 }
 
+static uint8_t tui_alarm_mod(uint8_t* buf, uint8_t ml) {
+	uint8_t mb[9];
+	uint8_t x = tui_alarm_mod_str(mb);
+	return tui_modfinish(buf,mb,ml,x);
+}

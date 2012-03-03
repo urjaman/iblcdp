@@ -13,7 +13,7 @@ static uint8_t bl_drv_value;
 static uint8_t bl_value;
 static uint8_t bl_to;
 static uint32_t bl_last_sec=0;
-
+static uint8_t bl_lock=0;
 const uint8_t backlight_values[17] PROGMEM = {
 	0, 1, 2, 3, 4, 8, 13, 21, 32, 45, 62, 83, 108, 137, 171, 210, 255
 };
@@ -21,7 +21,7 @@ const uint8_t backlight_values[17] PROGMEM = {
 static int8_t bl_v_now;
 static int8_t bl_v_fadeto;
 
-static void backlight_simple_set(int8_t v) {
+void backlight_simple_set(int8_t v) {
 	if (v < 0) {
 		OCR0A = 0;
 		DDRD &= ~_BV(6);
@@ -116,12 +116,14 @@ void backlight_set_to(uint8_t to) {
 }
 
 void backlight_activate(void) {
+	if (bl_lock) return;
 	bl_last_sec = timer_get();
 	bl_v_fadeto = bl_value;
 	backlight_fader();
 }
 
 void backlight_run(void) {
+	if (bl_lock) return;
 	uint32_t diff = timer_get() - bl_last_sec;
 	if (diff >= bl_to) {
 		if (relay_get_autodecision() == RLY_MODE_ON) {
@@ -134,6 +136,11 @@ void backlight_run(void) {
 	}
 	backlight_fader();
 }
+
+void backlight_lock(uint8_t lock) {
+	bl_lock = lock;
+}
+
 
 void backlight_set_contrast(uint8_t c) {
 	if (c>CONTRAST_MAX) c = CONTRAST_MAX;

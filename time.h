@@ -20,4 +20,7 @@ void lindate_string(unsigned char* buf, uint32_t lindate);
 
 #define TIME_EPOCH_YEAR 2000
 // Change that once per century or so :P
+// 1.1.TIME_EPOCH_YEAR day as 0-6, mon-sun.
+#define EPOCH_DAY_OF_WEEK 5
+// That would be a saturday.
 #endif

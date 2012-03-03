@@ -11,13 +11,18 @@ extern int16_t tui_temprefresh_hp_temp;
 extern uint8_t tui_temprefresh_lp_interval;
 extern uint8_t tui_temprefresh_hp_interval;
 
+#ifdef ALARMCLOCK
+#define SAVER_MAGIC1 0xA5C5
+#else
+#define SAVER_MAGIC1 0xA551
+#endif
 
-#define SAVER_MAGIC1 0xA550
 #define SAVER_MAGIC3 0xE5
 struct __attribute__ ((__packed__)) sys_settings {
 	uint16_t magic1;
 	uint16_t relay_autovoltage;
 	uint8_t relay_mode;
+	uint8_t relay_keepon;
 	uint8_t backlight_brightness;
 	uint8_t backlight_timeout;
 	uint8_t backlight_dv;
@@ -43,8 +48,13 @@ void saver_load_settings(void) {
 		crc = _crc16_update(crc, (((uint8_t*)&st)[i]) );
 	}
 	if (crc != st.crc16) return;
+#ifdef ALARMCLOCK
+	// Load alarm stuff from relay variables
+#else
 	relay_set_autovoltage(st.relay_autovoltage);
+	relay_set_keepon(st.relay_keepon);
 	relay_set(st.relay_mode);
+#endif
 	backlight_set(st.backlight_brightness);
 	backlight_set_to(st.backlight_timeout);
 	backlight_set_dv(st.backlight_dv);
@@ -62,8 +72,13 @@ void saver_save_settings(void) {
 	uint8_t i;
 	struct sys_settings st;
 	st.magic1 = SAVER_MAGIC1;
+#ifdef ALARMCLOCK
+	//Save alarm stuff in relay variables
+#else
 	st.relay_autovoltage = relay_get_autovoltage();
+	st.relay_keepon = relay_get_keepon();
 	st.relay_mode = relay_get_mode();
+#endif
 	st.backlight_brightness = backlight_get();
 	st.backlight_timeout = backlight_get_to();
 	st.backlight_dv = backlight_get_dv();
@@ -81,4 +96,3 @@ void saver_save_settings(void) {
 	st.crc16 = crc;
 	eeprom_update_block(&st,(void*)0, sizeof(struct sys_settings));
 }
-

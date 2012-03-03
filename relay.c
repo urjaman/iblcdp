@@ -5,6 +5,8 @@
 #include "backlight.h"
 #include "relay.h"
 
+#ifndef ALARMCLOCK
+
 #define RLY_THINKSTACKDEPTH 4
 static uint8_t relay_mode;
 static uint8_t relay_auto_thinkstack[RLY_THINKSTACKDEPTH];
@@ -118,3 +120,57 @@ void relay_run(void) {
 		}
 	}
 }
+
+#else
+// Alarm clock implementation of "relay" (only used for control of beep sound)
+
+void relay_init(void) {
+	PORTC &= ~_BV(3);
+	DDRC |= _BV(3);
+}
+
+void relay_set(uint8_t mode) {
+	switch (mode) {
+		default:
+		case RLY_MODE_OFF:
+			PORTC &= ~_BV(3);
+			break;
+		case RLY_MODE_ON:
+			PORTC |= _BV(3);
+			break;
+		case RLY_MODE_AUTO:
+			break;
+	}
+}
+
+void relay_set_autovoltage(uint16_t v) {
+	v=v;
+}
+
+void relay_set_keepon(uint8_t v) {
+	v=v;
+}
+
+uint8_t relay_get(void) {
+	return (PINC&_BV(3)) ? RLY_MODE_ON : RLY_MODE_OFF;
+}
+
+uint8_t relay_get_mode(void) {
+	return relay_get();
+}
+
+uint16_t relay_get_autovoltage(void) {
+	return 858*4;
+}
+
+uint8_t relay_get_autodecision(void) {
+	return RLY_MODE_ON;
+}
+
+uint8_t relay_get_keepon(void) {
+	return 90;
+}
+
+void relay_run(void) {
+}
+#endif

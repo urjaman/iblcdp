@@ -19,8 +19,6 @@ static uint8_t tui_force_draw;
 static uint8_t tui_next_refresh; 
 static uint8_t tui_refresh_interval=TUI_DEFAULT_REFRESH_INTERVAL; // by default 1s
 
-
-
 uint8_t tui_pollkey(void) {
 	uint8_t v = buttons_get();
 	mini_mainloop();
@@ -35,8 +33,6 @@ uint8_t tui_waitforkey(void) {
 	}
 }
 
-
-
 void tui_gen_menuheader(unsigned char* line, unsigned char* buf, PGM_P header) {
 	uint8_t y,z;
 	strcpy_P((char*)buf, header);
@@ -49,48 +45,9 @@ void tui_gen_menuheader(unsigned char* line, unsigned char* buf, PGM_P header) {
 	lcd_puts(line);
 }
 
-uint8_t tui_pgm_menupart(unsigned char* line, unsigned char* buf, PGM_P const menu_table[], uint8_t itemcnt, uint8_t start) {
-	uint8_t idx=start, z,y;
-	for (;;) {
-		uint8_t key;
-		strcpy_P((char*)buf, (PGM_P)pgm_read_word(&(menu_table[idx])));
-		memset(line,' ',16);
-		y = strlen((char*)buf);
-		z = (16 - y) / 2;
-		memcpy(&(line[z]),buf,y);
-		lcd_gotoxy(0,1);
-		lcd_puts(line);
-		timer_delay_ms(50);
-		key = tui_waitforkey();
-		switch (key) {
-			case BUTTON_S1:
-				idx++;
-				if (idx==itemcnt) idx = 0;
-				break;
-			case BUTTON_S2:
-				if (idx) idx--;
-				else idx = itemcnt-1;
-				break;
-			case BUTTON_BOTH:
-				return idx;
-		}
-	}
-}
-
-
-uint8_t tui_gen_listmenu(PGM_P header, PGM_P const menu_table[], uint8_t itemcnt, uint8_t start) {
-	unsigned char line[17];
-	unsigned char buf[17];
-	tui_gen_menuheader(line,buf,header);
-	return tui_pgm_menupart(line,buf,menu_table,itemcnt,start);
-}
-
-int32_t tui_gen_adjmenu(PGM_P header, printval_func_t *printer,int32_t min, int32_t max, int32_t start, int32_t step) {
-	unsigned char line[17];
-	unsigned char buf[17];
+int32_t tui_gen_menupart(unsigned char* line, unsigned char* buf, printval_func_t *printer, int32_t min, int32_t max, int32_t start, int32_t step, uint8_t delay) {
 	int32_t idx=start;
 	uint8_t z,y;
-	tui_gen_menuheader(line,buf,header);
 	for (;;) {
 		uint8_t key;
 		y = printer(buf,idx);
@@ -99,6 +56,7 @@ int32_t tui_gen_adjmenu(PGM_P header, printval_func_t *printer,int32_t min, int3
 		memcpy(&(line[z]),buf,y);
 		lcd_gotoxy(0,1);
 		lcd_puts(line);
+		if (delay) timer_delay_ms(delay);
 		key = tui_waitforkey();
 		switch (key) {
 			case BUTTON_S1:
@@ -114,6 +72,32 @@ int32_t tui_gen_adjmenu(PGM_P header, printval_func_t *printer,int32_t min, int3
 		}
 	}
 }
+static PGM_P const * tui_pgm_menu_table;
+static uint8_t tui_pgm_menupart_printer(unsigned char* buf, int32_t val) {
+	strcpy_P((char*)buf, (PGM_P)pgm_read_word(&(tui_pgm_menu_table[val])));
+	return strlen((char*)buf);
+}
+
+uint8_t tui_pgm_menupart(unsigned char* line, unsigned char* buf, PGM_P const menu_table[], uint8_t itemcnt, uint8_t start) {
+	tui_pgm_menu_table = menu_table;
+	return tui_gen_menupart(line,buf,tui_pgm_menupart_printer,0,itemcnt-1,start,1,50);
+}
+
+int32_t tui_gen_adjmenu(PGM_P header, printval_func_t *printer,int32_t min, int32_t max, int32_t start, int32_t step) {
+	unsigned char line[17];
+	unsigned char buf[17];
+	tui_gen_menuheader(line,buf,header);
+	return tui_gen_menupart(line,buf,printer,min,max,start,step,0);
+}
+
+
+uint8_t tui_gen_listmenu(PGM_P header, PGM_P const menu_table[], uint8_t itemcnt, uint8_t start) {
+	unsigned char line[17];
+	unsigned char buf[17];
+	tui_gen_menuheader(line,buf,header);
+	return tui_pgm_menupart(line,buf,menu_table,itemcnt,start);
+}
+
 
 static uint8_t tui_voltmenu_printer(unsigned char* buf, int32_t val) {
 	adc_print_dV(buf,(uint16_t)val);
@@ -215,7 +199,7 @@ static void tui_blsettingmenu(void) {
 			case 3:
 			tui_contrast_set_util();
 			break;
-			
+
 			default:
 			return;
 		}
@@ -241,7 +225,7 @@ void tui_set_clock(void) {
 	tm.hour = tui_gen_nummenu(PSTR("HOURS"), 0, 23, tm.hour);
 	tm.min = tui_gen_nummenu(PSTR("MINUTES"),0, 59, tm.min);
 	timer_set_time(&tm);
-}	
+}
 
 
 const unsigned char tui_sm_name[] PROGMEM = "SETTINGS";
@@ -310,8 +294,11 @@ static void tui_settingsmenu(void) {
 	}
 }
 
-
+#ifdef ALARMCLOCK
+const unsigned char tui_mm_s1[] PROGMEM = "ALARM MENU";
+#else
 const unsigned char tui_mm_s1[] PROGMEM = "SET RELAY MODE";
+#endif
 // Settings Menu (2)
 const unsigned char tui_mm_s3[] PROGMEM = "OTHERS";
 // Exit Menu (4)
@@ -329,7 +316,11 @@ static void tui_mainmenu(void) {
 		sel = tui_gen_listmenu(PSTR("MAIN MENU"), tui_mm_table, 4, sel);
 		switch (sel) {
 			case 0:
+#ifdef ALARMCLOCK
+				tui_alarm_menu();
+#else
 				tui_relaymenu();
+#endif
 				break;
 			case 1:
 				tui_settingsmenu();
@@ -393,9 +384,15 @@ void tui_init(void) {
 		}
 	}
 	tui_mp_mods[0][0] = 0; // Main Bat
+#ifdef ALARMCLOCK
+	tui_mp_mods[1][0] = 3; // Clock
+	tui_mp_mods[2][0] = 10; // Date
+	tui_mp_mods[3][0] = 2; // Relay State
+#else
 	tui_mp_mods[1][0] = 6; // Temp 0
 	tui_mp_mods[2][0] = 1; // Sec Bat
 	tui_mp_mods[3][0] = 2; // Relay State
+#endif
 	tui_draw_mainpage(0);
 }
 

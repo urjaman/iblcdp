@@ -129,6 +129,18 @@ void tui_gen_message(PGM_P l1, PGM_P l2) {
 	tui_waitforkey();
 }
 
+const unsigned char tui_q_s1[] PROGMEM = "NO";
+const unsigned char tui_q_s2[] PROGMEM = "YES";
+
+PGM_P const tui_q_table[] PROGMEM = {
+    (PGM_P)tui_q_s1,
+    (PGM_P)tui_q_s2,
+};
+
+uint8_t tui_are_you_sure(void) {
+	return tui_gen_listmenu(PSTR("ARE YOU SURE?"), tui_q_table, 2, 0);
+}
+
 
 //Generic Exit Menu Item
 const unsigned char tui_exit_menu[] PROGMEM = "EXIT MENU";
@@ -236,7 +248,14 @@ const unsigned char tui_sm_s4[] PROGMEM = "TUI CONFIG";
 // Set Clock (5)
 const unsigned char tui_sm_s6[] PROGMEM = "SAVE SETTINGS";
 const unsigned char tui_sm_s7[] PROGMEM = "LOAD SETTINGS";
-// Exit Menu (8)
+#ifdef ALARMCLOCK
+const unsigned char tui_sm_s8[] PROGMEM = "SET RELAY MODE";
+#else
+const unsigned char tui_sm_s8[] PROGMEM = "ALARM MENU";
+#endif
+
+// Exit Menu (9)
+
 
 PGM_P const tui_sm_table[] PROGMEM = { // Settings Menu
     (PGM_P)tui_sm_s1,
@@ -246,13 +265,14 @@ PGM_P const tui_sm_table[] PROGMEM = { // Settings Menu
     (PGM_P)tui_setclock_name,
     (PGM_P)tui_sm_s6,
     (PGM_P)tui_sm_s7,
+    (PGM_P)tui_sm_s8,
     (PGM_P)tui_exit_menu
 };
 
 static void tui_settingsmenu(void) {
 	uint8_t sel = 0;
 	for(;;) {
-		sel = tui_gen_listmenu((PGM_P)tui_sm_name, tui_sm_table, 8, sel);
+		sel = tui_gen_listmenu((PGM_P)tui_sm_name, tui_sm_table, 9, sel);
 		switch (sel) {
 			case 0: {
 			uint16_t v = tui_gen_voltmenu((PGM_P)tui_sm_s1, relay_get_autovoltage());
@@ -287,6 +307,14 @@ static void tui_settingsmenu(void) {
 			saver_load_settings();
 			tui_gen_message((PGM_P)tui_sm_name,PSTR("LOADED"));
 			return;
+			
+			case 7:
+#ifndef ALARMCLOCK
+			tui_alarm_menu();
+#else
+			tui_relaymenu();
+#endif
+			break;
 
 			default:
 			return;
@@ -401,7 +429,7 @@ void tui_run(void) {
 	uint8_t k = buttons_get();
 	if (k & BUTTON_S2) {
 		tui_mainmenu();
-		tui_draw_mainpage(1);
+		tui_draw_mainpage(0);
 		return;
 	} else {
 		if (tui_force_draw) {

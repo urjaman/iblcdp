@@ -1,13 +1,16 @@
 # AVR-GCC Makefile
 PROJECT=carlcdp
-SOURCES=main.c uart.c console.c lib.c appdb.c commands.c hd44780.c lcd.c timer.c backlight.c buttons.c adc.c relay.c tui.c saver.c tui-other.c dallas.c tui-modules.c tui-calc.c tui-temp.c batlvl.c time.c i2c.c rtc.c tui-alarm.c
-DEPS=Makefile
+SOURCES=main.c uart.c console.c lib.c appdb.c commands.c hd44780.c lcd.c timer.c backlight.c buttons.c adc.c relay.c tui.c saver.c tui-other.c dallas.c tui-modules.c tui-calc.c tui-temp.c batlvl.c time.c i2c.c rtc.c tui-alarm.c poweroff.c
+DEPS=Makefile buttons.h
 CC=avr-gcc
 OBJCOPY=avr-objcopy
 MMCU=atmega328p
 #AVRBINDIR=~/avr-tools/bin/
-AVRDUDECMD=sudo avrdude -p m328 -c avrispmkII -P usb -F
-DFLAGS=-DALARMCLOCK
+AVRDUDEMCU=m328
+AVRDUDECMD=sudo avrdude -p $(AVRDUDEMCU) -c avrispmkII -P usb
+REMOTEHOST=sempron
+AVRDUDECMD_REMOTE=avrdude -p $(AVRDUDEMCU) -c avrispmkII -P usb
+#DFLAGS=-DALARMCLOCK
 CFLAGS=-mmcu=$(MMCU) -Os -g -Wall -W -pipe -mcall-prologues -std=gnu99 -Wno-main $(DFLAGS)
  
 $(PROJECT).hex: $(PROJECT).out
@@ -29,9 +32,15 @@ asm: $(SOURCES)
 objdump: $(PROJECT).out
 	$(AVRBINDIR)avr-objdump -xd $(PROJECT).out | less 
 
-
 program: $(PROJECT).hex
 	cp $(PROJECT).hex /tmp && cd /tmp && $(AVRBINDIR)$(AVRDUDECMD) -U flash:w:$(PROJECT).hex
+
+program-remote: $(PROJECT).hex
+	scp $(PROJECT).hex $(REMOTEHOST):/tmp && ssh $(REMOTEHOST) "$(AVRDUDECMD_REMOTE) -U flash:w:/tmp/$(PROJECT).hex"
+
+program-p4-remote: $(PROJECT).hex
+	#cat password $(PROJECT).hex > remote-data.txt
+	cat $(PROJECT).hex | ssh Admin@p4 "/cygdrive/c/WinAVR-20100110/bin/$(AVRDUDECMD_REMOTE) -V -U flash:w:-:i"
 
 size: $(PROJECT).out
 	$(AVRBINDIR)avr-size $(PROJECT).out

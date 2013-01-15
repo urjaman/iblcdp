@@ -5,16 +5,11 @@
 
 // UART MODULE START
 typedef unsigned char urxbufoff_t;
-typedef unsigned char utxbufoff_t;
-#define UART_BUFLEN 16 
+#define UART_BUFLEN 16
 unsigned char volatile uart_rcvbuf[UART_BUFLEN];
 urxbufoff_t volatile uart_rcvwptr;
 urxbufoff_t volatile uart_rcvrptr;
 
-#define UARTTX_BUFLEN 16 
-unsigned char volatile uart_sndbuf[UARTTX_BUFLEN];
-utxbufoff_t volatile uart_sndwptr;
-utxbufoff_t volatile uart_sndrptr;
 
 ISR(USART_RX_vect) {
 	urxbufoff_t reg = uart_rcvwptr;
@@ -40,12 +35,11 @@ ISR(USART_UDRE_vect) {
 		return;
 	}
 }
-	
-	
+
+
 uint8_t uart_isdata(void) {
-	cli();
-	if (uart_rcvwptr != uart_rcvrptr) { sei(); return 1; }
-	else { sei(); return 0; }
+	if (uart_rcvwptr != uart_rcvrptr) { return 1; }
+	else { return 0; }
 	}
 
 uint8_t uart_recv(void) {

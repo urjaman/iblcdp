@@ -53,10 +53,10 @@ void mini_mainloop(void) {
 	adc_run();
 	uartif_run();
 	backlight_run();
+	tui_alarm_run();
 	batlvl_run();
 	relay_run();
 	dallas_run();
-	tui_alarm_run();
 }
 
 void main (void) __attribute__ ((noreturn));

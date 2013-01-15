@@ -6,7 +6,7 @@
 #include "dallas.h"
 #include "batlvl.h"
 
-#define TUI_MOD_CNT 12
+#define TUI_MOD_CNT 13
 static uint8_t tui_mbv_mod(uint8_t* buf, uint8_t max);
 static uint8_t tui_sbv_mod(uint8_t* buf, uint8_t max);
 static uint8_t tui_rlst_mod(uint8_t* buf, uint8_t max);
@@ -17,6 +17,7 @@ static uint8_t tui_temp_mod(uint8_t* buf, uint8_t ml, uint8_t idx);
 static uint8_t tui_soc_mod(uint8_t* buf, uint8_t ml, uint8_t c, uint8_t soc);
 static uint8_t tui_date_mod(uint8_t* buf, uint8_t ml);
 static uint8_t tui_alarm_mod(uint8_t* buf, uint8_t ml);
+static uint8_t tui_dtwd_mod(uint8_t* buf, uint8_t ml);
 
 static const unsigned char nullstr[] PROGMEM = "-NONE-";
 static const unsigned char mbistr[] PROGMEM = "MAIN BAT VOLTS";
@@ -31,6 +32,7 @@ static const unsigned char mbsocstr[] PROGMEM = "MAIN BAT SoC";
 static const unsigned char sbsocstr[] PROGMEM = "SEC BAT SoC";
 static const unsigned char datestr[] PROGMEM = "DATE YY-MM-DD";
 static const unsigned char alarmstr[] PROGMEM = "ALARM INFO";
+static const unsigned char dtwdstr[] PROGMEM = "DATE WD,MM-DD";
 
 PGM_P const tui_mods_table[] PROGMEM = {
     (PGM_P)nullstr,
@@ -45,7 +47,8 @@ PGM_P const tui_mods_table[] PROGMEM = {
     (PGM_P)mbsocstr,
     (PGM_P)sbsocstr,
     (PGM_P)datestr,
-    (PGM_P)alarmstr
+    (PGM_P)alarmstr,
+    (PGM_P)dtwdstr
 };
 
 uint8_t tui_select_mod(uint8_t sel) {
@@ -70,6 +73,7 @@ uint8_t tui_run_mod(uint8_t mod, uint8_t *p, uint8_t ml) {
 		case 9: return tui_soc_mod(p,ml,'S',batlvl_get_sb());
 		case 10: return tui_date_mod(p,ml);
 		case 11: return tui_alarm_mod(p,ml);
+		case 12: return tui_dtwd_mod(p,ml);
 	}
 }
 
@@ -198,16 +202,20 @@ static uint8_t tui_clk24_mod(uint8_t* buf, uint8_t ml) {
 	return tui_modfinish(buf,mb,ml,5);
 }
 
+static void tui_date_common(struct mtm* tm, uint8_t* lb) {
+	timer_get_time(tm);
+	tui_num_helper(lb+3,tm->month);
+	lb[5] = '-';
+	tui_num_helper(lb+6,tm->day);
+}
+
 static uint8_t tui_date_mod(uint8_t* buf, uint8_t ml) {
 	struct mtm tm;
 	uint8_t mb[8];
-	timer_get_time(&tm);
+	tui_date_common(&tm,mb);
 	tm.year = (((uint16_t)tm.year) + TIME_EPOCH_YEAR) % 100;
 	tui_num_helper(mb,tm.year);
 	mb[2] = '-';
-	tui_num_helper(mb+3,tm.month);
-	mb[5] = '-';
-	tui_num_helper(mb+6,tm.day);
 	if (ml<8) { // provide alternative 5-length MM-DD
 		return tui_modfinish(buf,mb+3,ml,5);
 	} else {
@@ -215,6 +223,28 @@ static uint8_t tui_date_mod(uint8_t* buf, uint8_t ml) {
 	}
 }
 
+static const unsigned char wdstr[] PROGMEM = "MOTUWETHFRSASU";
+static uint8_t tui_dtwd_mod(uint8_t* buf, uint8_t ml) {
+	struct mtm tm;
+	uint8_t mb[8];
+	tui_date_common(&tm,mb);
+	uint32_t ld = mtm2lindate(&tm) + EPOCH_DAY_OF_WEEK;
+	uint8_t wd = ld % 7UL;
+	uint8_t wdc1,wdc2;
+	wdc1 = pgm_read_byte(wdstr+wd*2+0);
+	wdc2 = pgm_read_byte(wdstr+wd*2+1);
+	if (ml<8) { // provide alternative 5-length WD,DD
+		mb[3] = wdc1;
+		mb[4] = wdc2;
+		mb[5] = ',';
+		return tui_modfinish(buf,mb+3,ml,5);
+	} else {
+		mb[0] = wdc1;
+		mb[1] = wdc2;
+		mb[2] = ',';
+		return tui_modfinish(buf,mb,ml,8);
+	}
+}
 
 static uint8_t tui_dif_mod(uint8_t* buf, uint8_t ml) {
 	uint16_t mbv,sbv;

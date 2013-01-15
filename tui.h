@@ -24,8 +24,11 @@ int32_t tui_gen_adjmenu(PGM_P header, printval_func_t *printer,int32_t min, int3
 
 extern const unsigned char tui_exit_menu[];
 
+uint8_t tui_are_you_sure(void);
+
 /* tui-other.c */
 void tui_othermenu(void);
+void tui_time_print(uint32_t nt);
 
 /* tui-modules.c */
 uint8_t tui_run_mod(uint8_t mod, uint8_t *p, uint8_t ml);
@@ -60,6 +63,8 @@ extern uint16_t tui_fc_last_fuel_price;
 extern uint16_t tui_fc_last_fuel_efficiency; // l/100km*100
 extern uint16_t tui_fc_last_kilometres; // 300km*10
 
+/* poweroff.c */
+void tui_poweroff(void);
 
 /* tui-alarm.c if ALARMCLOCK */
 void tui_alarm_run(void);

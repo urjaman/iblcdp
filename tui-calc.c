@@ -512,10 +512,13 @@ reload:
 						case 0: // EXIT
 							return;
 						case 1: // DEL IDX
-							tui_fc_history_del_idx(idx);
-							tui_fc_history_ee_exit();
-							if (idx) idx--;
-							goto reload;
+							if (tui_are_you_sure()) {
+								tui_fc_history_del_idx(idx);
+								tui_fc_history_ee_exit();
+								if (idx) idx--;
+								goto reload;
+							}
+							break;
 						case 2: // FLIP MODE
 							mode ^= 1;
 							break;

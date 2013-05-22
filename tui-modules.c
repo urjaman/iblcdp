@@ -6,7 +6,7 @@
 #include "dallas.h"
 #include "batlvl.h"
 
-#define TUI_MOD_CNT 13
+#define TUI_MOD_CNT 19
 static uint8_t tui_mbv_mod(uint8_t* buf, uint8_t max);
 static uint8_t tui_sbv_mod(uint8_t* buf, uint8_t max);
 static uint8_t tui_rlst_mod(uint8_t* buf, uint8_t max);
@@ -18,6 +18,7 @@ static uint8_t tui_soc_mod(uint8_t* buf, uint8_t ml, uint8_t c, uint8_t soc);
 static uint8_t tui_date_mod(uint8_t* buf, uint8_t ml);
 static uint8_t tui_alarm_mod(uint8_t* buf, uint8_t ml);
 static uint8_t tui_dtwd_mod(uint8_t* buf, uint8_t ml);
+static uint8_t tui_gbv_mod(uint8_t* buf, uint8_t ml, uint8_t c1, uint8_t c2, uint16_t v);
 
 static const unsigned char nullstr[] PROGMEM = "-NONE-";
 static const unsigned char mbistr[] PROGMEM = "MAIN BAT VOLTS";
@@ -34,6 +35,13 @@ static const unsigned char datestr[] PROGMEM = "DATE YY-MM-DD";
 static const unsigned char alarmstr[] PROGMEM = "ALARM INFO";
 static const unsigned char dtwdstr[] PROGMEM = "DATE WD,MM-DD";
 
+static const unsigned char mbvrppstr[] PROGMEM = "MAIN BAT RIPPLE";
+static const unsigned char sbvrppstr[] PROGMEM = "SEC BAT RIPPLE";
+static const unsigned char mbvmaxstr[] PROGMEM = "MAIN BAT VMAX";
+static const unsigned char sbvmaxstr[] PROGMEM = "SEC BAT VMAX";
+static const unsigned char mbvminstr[] PROGMEM = "MAIN BAT VMIN";
+static const unsigned char sbvminstr[] PROGMEM = "SEC BAT VMIN";
+
 PGM_P const tui_mods_table[] PROGMEM = {
     (PGM_P)nullstr,
     (PGM_P)mbistr,
@@ -48,7 +56,14 @@ PGM_P const tui_mods_table[] PROGMEM = {
     (PGM_P)sbsocstr,
     (PGM_P)datestr,
     (PGM_P)alarmstr,
-    (PGM_P)dtwdstr
+    (PGM_P)dtwdstr,
+    (PGM_P)mbvrppstr,
+    (PGM_P)sbvrppstr,
+    (PGM_P)mbvmaxstr,
+    (PGM_P)sbvmaxstr,
+    (PGM_P)mbvminstr,
+    (PGM_P)sbvminstr
+
 };
 
 uint8_t tui_select_mod(uint8_t sel) {
@@ -74,6 +89,14 @@ uint8_t tui_run_mod(uint8_t mod, uint8_t *p, uint8_t ml) {
 		case 10: return tui_date_mod(p,ml);
 		case 11: return tui_alarm_mod(p,ml);
 		case 12: return tui_dtwd_mod(p,ml);
+
+		case 13: return tui_gbv_mod(p,ml,'M','R',adc_read_maxv(ADC_CH_MB)-adc_read_minv(ADC_CH_MB));
+		case 14: return tui_gbv_mod(p,ml,'S','R',adc_read_maxv(ADC_CH_SB)-adc_read_minv(ADC_CH_SB));
+		case 15: return tui_gbv_mod(p,ml,'M','+',adc_read_maxv(ADC_CH_MB));
+		case 16: return tui_gbv_mod(p,ml,'S','+',adc_read_maxv(ADC_CH_SB));
+		case 17: return tui_gbv_mod(p,ml,'M','-',adc_read_minv(ADC_CH_MB));
+		case 18: return tui_gbv_mod(p,ml,'S','-',adc_read_minv(ADC_CH_SB));
+
 	}
 }
 
@@ -134,6 +157,14 @@ static uint8_t tui_sbv_mod(uint8_t* buf, uint8_t ml) {
 	mb[0] = 'S';
 	mb[1] = ':';
 	adc_print_v(&(mb[2]),adc_read_sb());
+	return tui_modfinish(buf,mb,ml,8);
+}
+
+static uint8_t tui_gbv_mod(uint8_t* buf, uint8_t ml, uint8_t c1, uint8_t c2, uint16_t v) {
+	uint8_t mb[9];
+	mb[0] = c1;
+	mb[1] = c2;
+	adc_print_v(&(mb[2]),v);
 	return tui_modfinish(buf,mb,ml,8);
 }
 

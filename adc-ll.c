@@ -6,7 +6,11 @@
 
 uint8_t adc_isr_ch;
 uint8_t adc_isr_sl;
-uint16_t adc_isr_supersample[ADC_MUX_CNT];
+// Supersample also has min and max stuff (so supersample*CNT, min*CNT, max*CNT)
+volatile uint16_t adc_isr_supersample[ADC_MUX_CNT*3];
+#define adc_isr_min(x) adc_isr_supersample[ADC_MUX_CNT+(x)]
+#define adc_isr_max(x) adc_isr_supersample[(ADC_MUX_CNT*2)+(x)]
+
 volatile uint32_t adc_isr_out[ADC_MUX_CNT];
 volatile uint16_t adc_isr_out_cnt;
 
@@ -51,6 +55,33 @@ ISR(ADC_vect, ISR_NAKED) {
 	"adc r29, r25\n\t"
 	"st Z, r28\n\t"
 	"std Z+1, r29\n\t"
+	// MinMax Code
+	// Point Z to min values
+	"adiw r30, " S(ADC_MUX_CNT*2) "\n\t"
+	"ld r28, Z\n\t"
+	"ldd r29, Z+1\n\t"
+	// brlo happens if Rd < Rr, in cp Rd, Rr
+	// brsh if Rd >= Rr
+	"cp r24, r28\n\t" // sample Rd vs min  Rr
+	"cpc r25, r29\n\t"
+	"brsh 10f\n\t" // Sample not less than (>=) saved min => skip
+	"st Z, r24\n\t"
+	"std Z+1, r25\n\t"
+	"10:\n\t"
+	// Max code, Point Z to max values
+	"adiw r30, " S(ADC_MUX_CNT*2) "\n\t"
+	"ld r28, Z\n\t"
+	"ldd r29, Z+1\n\t"
+	// if (sample > max) store()
+	// => in inverse if (sample <= max) dont_store()
+	// => if must use >= or <... if (max  >= sample) dont_store()
+	"cp r28, r24\n\t"
+	"cpc r29, r25\n\t"
+	"brsh 11f\n\t"
+	"st Z, r24\n\t"
+	"std Z+1, r25\n\t"
+	"11:\n\t"
+	// MinMax End
 	"lds r24, adc_isr_sl\n\t"
 	"and r24, r24\n\t"
 	"breq 4f\n\t"
@@ -139,12 +170,16 @@ void adc_init_ll(void) {
 	for(uint8_t i=0;i<ADC_MUX_CNT;i++) {
 		adc_isr_out[i] = 0;
 		adc_isr_supersample[i] = 0;
+		adc_isr_max(i) = 0;
+		adc_isr_min(i) = 0xFFFF;
 	}
 	sei();
 }
 
-uint16_t adc_run_ll(uint16_t adc_values[ADC_MUX_CNT]) {
+uint16_t adc_run_ll(uint16_t adc_values[ADC_MUX_CNT], uint16_t minv[ADC_MUX_CNT], uint16_t maxv[ADC_MUX_CNT]) {
 	uint32_t copy_out[ADC_MUX_CNT];
+	uint16_t copy_min[ADC_MUX_CNT];
+	uint16_t copy_max[ADC_MUX_CNT];
 	uint16_t copy_count=0;
 	cli();
 	if (adc_isr_out_cnt) {
@@ -152,6 +187,10 @@ uint16_t adc_run_ll(uint16_t adc_values[ADC_MUX_CNT]) {
 		for (uint8_t i=0;i<ADC_MUX_CNT;i++) {
 			copy_out[i] = adc_isr_out[i];
 			adc_isr_out[i] = 0;
+			copy_min[i] = adc_isr_min(i);
+			adc_isr_min(i) = 0xFFFF;
+			copy_max[i] = adc_isr_max(i);
+			adc_isr_max(i) = 0;
 		}
 		adc_isr_out_cnt = 0;
 	}
@@ -159,6 +198,8 @@ uint16_t adc_run_ll(uint16_t adc_values[ADC_MUX_CNT]) {
 	if (copy_count) {
 		for (uint8_t i=0;i<ADC_MUX_CNT;i++) {
 			adc_values[i]= ((uint16_t)((uint32_t)(copy_out[i]/(uint32_t)copy_count)))>>2;
+			maxv[i] = copy_max[i]<<2;
+			minv[i] = copy_min[i]<<2;
 		}
 	}
 	return copy_count;

@@ -126,6 +126,7 @@ static void timer_time_tick(void) {
 			if (tmp>=24) {
 				tmp = mtm2lindate(&timer_tm_now)+1;
 				lindate2mtm(&timer_tm_now,tmp);
+				tmp = 0;
 			}
 			timer_tm_now.hour = tmp;
 			tmp = 0;

@@ -8,6 +8,110 @@
 #include "dallas.h"
 #include "rtc.h"
 #include "adc.h"
+#include "i2c-uart.h"
+
+// I2C UART test menu start
+
+const unsigned char tui_um_s2[] PROGMEM = "INIT UART";
+const unsigned char tui_um_s3[] PROGMEM = "VIEW RX";
+const unsigned char tui_um_s4[] PROGMEM = "TX HELLO";
+const unsigned char tui_um_s5[] PROGMEM = "CHECK PRESENSE";
+
+PGM_P const tui_um_table[] PROGMEM = {
+    (PGM_P)tui_um_s2, // init
+    (PGM_P)tui_um_s3, // rx view
+    (PGM_P)tui_um_s4, // tx hello
+    (PGM_P)tui_um_s5, // tx hello
+    (PGM_P)tui_exit_menu, // exit
+};
+
+static uint8_t tui_hexbyte_printer(unsigned char*buf, int32_t v) {
+	buf[0] = '0';
+	buf[1] = 'x';
+	uchar2xstr(buf+2,v);
+	return 4;
+}
+
+const uint32_t baud_table[] PROGMEM = { 9600, 19200, 38400, 57600, 115200 };
+
+static uint8_t tui_baud_printer(unsigned char*buf, int32_t v) {
+	uint32_t v2 = pgm_read_dword(&(baud_table[v]));
+	return luint2str(buf,v2);
+}
+
+const unsigned char tui_dm_s7[] PROGMEM = "I2C UART TESTS";
+static void tui_i2cuart_menu(void) {
+	static uint8_t i2cuart_addr = 0x90;
+	uint8_t sel=0;
+	for (;;) {
+		sel = tui_gen_listmenu((PGM_P)tui_dm_s7, tui_um_table, 5, sel);
+		switch (sel) {
+			default: 
+				return;
+			case 0:{
+				// Init UART
+				unsigned char buf[12];
+				i2cuart_addr = tui_gen_adjmenu(PSTR("I2C ADDR"),tui_hexbyte_printer,0x00,0xFF,i2cuart_addr,2);
+				uint8_t baudsel = tui_gen_adjmenu(PSTR("BAUD RATE"),tui_baud_printer,0,4,0,1);
+				uint32_t baudrate = pgm_read_dword(&baud_table[baudsel]);
+				uint16_t rv = i2cuart_init(i2cuart_addr,baudrate);
+				lcd_clear();
+				luint2str(buf,rv);
+				lcd_gotoxy(4,0);
+				lcd_puts_P(PSTR("POLL PERIOD:"));
+				lcd_gotoxy((LCD_MAXX-strlen((char*)buf))>>1,1);
+				lcd_puts(buf);
+				tui_waitforkey();
+				}
+				break;
+			case 1:{
+				// RX Viewer
+				uint8_t x = 0;
+				lcd_clear();
+				uint8_t lcdx = 0;
+				uint8_t lcdy = 0;
+				while (!x) {
+					uint8_t r = i2cuart_poll_rx(i2cuart_addr,NULL);
+					if (r) {
+						uint8_t c=' ';
+						i2cuart_readfifo(i2cuart_addr,&c,1);
+						if (c==0xd) {
+							lcdy ^= 1;
+							lcdx = 0;
+							lcd_gotoxy(lcdx,lcdy);
+						} else {
+							lcd_putchar(c);
+							lcdx++;
+							if (lcdx>=LCD_MAXX) {
+								lcdy ^= 1;
+								lcdx = 0;
+								lcd_gotoxy(lcdx,lcdy);
+							}
+						}
+					}
+					x = buttons_get();
+					mini_mainloop();
+				}
+				}
+				break;
+			case 2:{ // TX Hello
+				unsigned char buf[16];
+				strcpy_P((char*)buf,PSTR("Hello World!\r\n"));
+				i2cuart_writefifo(i2cuart_addr,buf,14);
+				}
+				break;
+			case 3:{ // Check Presence
+				PGM_P l1 = PSTR("I2C-UART IS");
+				if (i2cuart_exists(i2cuart_addr)) {
+					tui_gen_message(l1,PSTR("PRESENT"));
+				} else {
+					tui_gen_message(l1,PSTR("NOT PRESENT"));
+				}
+				}
+				break;
+		}
+	}
+}
 
 // Debug Info Menu start	
 
@@ -17,14 +121,13 @@ const unsigned char tui_dm_s2[] PROGMEM = "RTC INFO";
 const unsigned char tui_dm_s3[] PROGMEM = "ADC SAMPLES/S";
 const unsigned char tui_dm_s4[] PROGMEM = "5HZ COUNTER";
 const unsigned char tui_dm_s5[] PROGMEM = "RAW ADC VIEW";
-const unsigned char tui_dm_s6[] PROGMEM = "ADC CALIBRATION";
 PGM_P const tui_dm_table[] PROGMEM = {
     (PGM_P)tui_dm_s1, // uptime
     (PGM_P)tui_dm_s2, // rtc info
     (PGM_P)tui_dm_s3, // adc samples
     (PGM_P)tui_dm_s4, // 5hz counter
     (PGM_P)tui_dm_s5, // Raw ADC view
-    (PGM_P)tui_dm_s6, // ADC Calibration
+    (PGM_P)tui_dm_s7, // I2C UART
     (PGM_P)tui_exit_menu, // exit
 };
 
@@ -169,7 +272,8 @@ static void tui_raw_adc_view(void) {
 // Calib is 65536+diff, thus saved is diff = calib - 65536.
 //int16_t adc_calibration_diff[ADC_MUX_CNT] = { ADC_MB_SCALE-65536, ADC_SB_SCALE-65536 };
 
-static void tui_adc_calibrate(void) {
+/* Used from tui.c / settings menu */
+void tui_adc_calibrate(void) {
 	const uint16_t min_calib_v = 6*256; // Min 6V on a channel to calibrate it.
 	uint16_t target;
 	uint16_t mcv = adc_read_mb();
@@ -276,14 +380,17 @@ static void tui_debuginfomenu(void) {
 			case 2: 
 				tui_adc_ss();
 				break;
+			
 			case 3:
 				tui_timer_5hzcnt();
 				break;
+			
 			case 4:
 				tui_raw_adc_view();
 				break;
+			
 			case 5:
-				tui_adc_calibrate();
+				tui_i2cuart_menu();
 				break;
 			default:
 				return;

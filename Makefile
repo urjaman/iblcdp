@@ -1,7 +1,7 @@
 # AVR-GCC Makefile
 PROJECT=carlcdp
-SOURCES=main.c uart.c console.c lib.c appdb.c commands.c hd44780.c lcd.c timer.c backlight.c buttons.c adc.c relay.c tui.c saver.c tui-other.c dallas.c tui-modules.c tui-calc.c tui-temp.c batlvl.c time.c i2c.c rtc.c tui-alarm.c poweroff.c
-DEPS=Makefile buttons.h
+SOURCES=main.c uart.c console.c lib.c appdb.c commands.c hd44780.c lcd.c timer.c backlight.c buttons.c adc.c relay.c tui.c saver.c tui-other.c dallas.c tui-modules.c tui-calc.c tui-temp.c batlvl.c time.c i2c.c rtc.c tui-alarm.c poweroff.c i2c-uart.c
+DEPS=Makefile buttons.h i2c-uart.h main.h
 CC=avr-gcc
 OBJCOPY=avr-objcopy
 MMCU=atmega328p
@@ -9,7 +9,7 @@ MMCU=atmega328p
 AVRDUDEMCU=m328
 AVRDUDECMD=sudo avrdude -p $(AVRDUDEMCU) -c avrispmkII -P usb
 REMOTEHOST=sempron
-AVRDUDECMD_REMOTE=avrdude -p $(AVRDUDEMCU) -c avrispmkII -P usb
+AVRDUDECMD_REMOTE=/usr/avr/bin/avrdude -p $(AVRDUDEMCU) -c avrispmkII -P usb
 #DFLAGS=-DALARMCLOCK
 CFLAGS=-mmcu=$(MMCU) -Os -g -Wall -W -pipe -mcall-prologues -std=gnu99 -Wno-main $(DFLAGS)
  

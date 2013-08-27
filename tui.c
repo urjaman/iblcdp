@@ -253,6 +253,7 @@ const unsigned char tui_sm_s8[] PROGMEM = "SET RELAY MODE";
 #else
 const unsigned char tui_sm_s8[] PROGMEM = "ALARM MENU";
 #endif
+const unsigned char tui_sm_s9[] PROGMEM = "ADC CALIBRATION";
 
 // Exit Menu (9)
 
@@ -266,13 +267,14 @@ PGM_P const tui_sm_table[] PROGMEM = { // Settings Menu
     (PGM_P)tui_sm_s6,
     (PGM_P)tui_sm_s7,
     (PGM_P)tui_sm_s8,
+    (PGM_P)tui_sm_s9,
     (PGM_P)tui_exit_menu
 };
 
 static void tui_settingsmenu(void) {
 	uint8_t sel = 0;
 	for(;;) {
-		sel = tui_gen_listmenu((PGM_P)tui_sm_name, tui_sm_table, 9, sel);
+		sel = tui_gen_listmenu((PGM_P)tui_sm_name, tui_sm_table, 10, sel);
 		switch (sel) {
 			case 0: {
 			uint16_t v = tui_gen_voltmenu((PGM_P)tui_sm_s1, relay_get_autovoltage());
@@ -316,6 +318,10 @@ static void tui_settingsmenu(void) {
 #endif
 			break;
 
+			case 8:
+			tui_adc_calibrate();
+			break;
+			
 			default:
 			return;
 		}

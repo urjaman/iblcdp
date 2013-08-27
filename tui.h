@@ -29,6 +29,7 @@ uint8_t tui_are_you_sure(void);
 /* tui-other.c */
 void tui_othermenu(void);
 void tui_time_print(uint32_t nt);
+void tui_adc_calibrate(void);
 
 /* tui-modules.c */
 uint8_t tui_run_mod(uint8_t mod, uint8_t *p, uint8_t ml);

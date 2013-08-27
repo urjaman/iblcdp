@@ -12,7 +12,7 @@
 #include "i2c.h"
 #include <util/twi.h>
 /* I2C clock in Hz */
-#define SCL_CLOCK  100000L
+#define SCL_CLOCK  200000L
 
 /*************************************************************************
  Initialization of the I2C bus interface. Need to be called only once
@@ -132,6 +132,7 @@ fail_exit:
 	return 1;
 }
 
+
 /************************************************************************
  Perform register-based I2C device operations. This writes cnt regs
  starting with reg into dev from buf. Return values per i2c_start().
@@ -148,4 +149,15 @@ uint8_t i2c_write_regs(uint8_t dev, uint8_t reg, uint8_t cnt, uint8_t* buf) {
 fail_exit:
 	i2c_stop();
 	return 1;
+}
+
+
+/* Simple 1-byte transfer versions of the above functions. */
+uint8_t i2c_read_reg(uint8_t dev, uint8_t reg, uint8_t *val) {
+	return i2c_read_regs(dev,reg,1,val);
+}
+
+
+uint8_t i2c_write_reg(uint8_t dev, uint8_t reg, uint8_t val) {
+	return i2c_write_regs(dev,reg,1,&val);
 }

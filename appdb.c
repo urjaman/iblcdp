@@ -36,7 +36,7 @@ void invalid_command(void) {
 
 void *find_appdb(unsigned char* cmd) {
 	uint8_t i;
-	struct command_t * ctptr;
+	const struct command_t * ctptr;
 	PGM_P name;
 	void* fp;
 	for(i=0;;i++) {

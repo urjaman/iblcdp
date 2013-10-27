@@ -16,6 +16,7 @@ uint8_t tui_pgm_menupart(unsigned char* line, unsigned char* buf, PGM_P const me
 
 uint8_t tui_gen_listmenu(PGM_P header, PGM_P const menu_table[], uint8_t itemcnt, uint8_t start);
 void tui_gen_message(PGM_P l1, PGM_P l2);
+void tui_gen_message_m(PGM_P l1, const unsigned char* l2m);
 uint16_t tui_gen_nummenu(PGM_P header, uint16_t min, uint16_t max, uint16_t start);
 void tui_gen_menuheader(unsigned char* line, unsigned char* buf, PGM_P header);
 void tui_set_clock(void);

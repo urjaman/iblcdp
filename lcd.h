@@ -23,7 +23,7 @@ void	lcd_init(void);
  */
 void	lcd_putchar(unsigned char c);
 
-void lcd_puts(unsigned char* str);
+void lcd_puts(const unsigned char* str);
 void lcd_puts_P(PGM_P str);
 void lcd_clear(void);
 void lcd_gotoxy(uint8_t x, uint8_t y);

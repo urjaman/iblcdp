@@ -18,7 +18,7 @@ uint8_t timer_time_isvalid(void);
 
 // Delay us and delay ms, both have a limit of 200ms (for 5hzp)
 // and a granularity of US_PER_SSUNIT (32us)
-void timer_delay_us(uint32_t us);
+void timer_delay_us(uint24_t us);
 void timer_delay_ms(uint8_t ms);
 
 
@@ -27,7 +27,7 @@ void timer_init(void);
 uint16_t timer_get_subsectimer(void);
 uint8_t timer_getdec_todo(void);
 uint8_t timer_get_todo(void);
-uint32_t timer_get_linear_ss_time(void);
+uint24_t timer_get_linear_ss_time(void);
 
 /* timer-ll.c is used to consolidate access to todo and subsectimer 
    to a single object */

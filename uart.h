@@ -5,7 +5,7 @@ uint8_t uart_recv(void);
 void uart_send(uint8_t val);
 void uart_init(void);
 void uart_wait_txdone(void);
-#define BAUD 9600
+#define BAUD 115200
 
 //#define dprint(s) sendstr_P(PSTR(s "\r\n"))
 #define dprint(s)

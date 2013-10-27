@@ -9,7 +9,7 @@
 #define DEL 0x7F
 #define SPACE 0x20
 
-#ifdef ENABLE_UARTMODULE
+#ifdef ENABLE_UARTIF
 void sendstr_P(PGM_P str) {
 	unsigned char val;
 	for(;;) {
@@ -19,9 +19,6 @@ void sendstr_P(PGM_P str) {
 		str++;
 		}
 	}
-#endif
-
-#ifdef ENABLE_UARTIF
 
 // rv=1 == got a line, 0= call me again
 unsigned char getline_mc(unsigned char* buf, uint8_t len) {
@@ -63,7 +60,7 @@ unsigned char* scanfor_notspace(unsigned char *buf) {
 		buf++;
 	}
 	}
-	
+
 unsigned char* scanfor_space(unsigned char *buf) {
 	for (;;) {
 		if (!(*buf)) return buf;
@@ -71,7 +68,7 @@ unsigned char* scanfor_space(unsigned char *buf) {
 		buf++;
 	}
 	}
-	
+
 static unsigned char count_tokens(unsigned char *rcvbuf) {
 	unsigned char tokens=0;
 	for (;;) {
@@ -83,7 +80,7 @@ static unsigned char count_tokens(unsigned char *rcvbuf) {
 	}
 	return tokens;
 	}
-	
+
 void tokenize(unsigned char *rcvbuf,unsigned char** ptrs, uint8_t* tkcntptr) {
 	uint8_t i;
 	uint8_t tokens;
@@ -91,7 +88,7 @@ void tokenize(unsigned char *rcvbuf,unsigned char** ptrs, uint8_t* tkcntptr) {
 	tokens = count_tokens(rcvbuf);
 	if (tokens > MAXTOKENS) tokens = MAXTOKENS;
 	if (tkcntptr) *tkcntptr = tokens;
-	
+
 	for (i=0;i<tokens;i++) {
 		rcvbuf = scanfor_notspace(rcvbuf);
 		if (!(*rcvbuf)) break;

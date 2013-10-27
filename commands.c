@@ -170,7 +170,7 @@ void calc_cmd(void) {
 	unsigned long int val1;
 	unsigned long int val2;
 	if (token_count < 2) return;
-	
+
 	if (*(tokenptrs[1]) == '(') {
 		val1 = closureparser(2,&i);
 	} else {
@@ -206,7 +206,7 @@ void timer_cmd(void) {
 
 void help_cmd(void) {
 	uint8_t i;
-	struct command_t * ctptr;
+	const struct command_t * ctptr;
 	PGM_P name;
 	for(i=0;;i++) {
 		ctptr = &(appdb[i]);

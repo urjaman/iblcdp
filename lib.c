@@ -29,7 +29,6 @@ uint8_t str2uchar(unsigned char *buf) {
 		if ((*buf >= '0')||(*buf <= '9')) {
 			rv *= 10;
 			rv = rv + (*buf &0x0F);
-			
 		}
 	}
 	return rv;
@@ -55,7 +54,7 @@ uint32_t astr2luint(unsigned char *buf) {
 	for(i=0;i<len;i++) {
 		if (!(isvalid(buf[i],base))) continue;
 		rv = rv * base;
-		rv += reverse_hextab(buf[i]); // RV HEXTAB works also for base 10
+		rv += reverse_hextab(buf[i]); // RVHEXTAB works also for base 10
 	}
 	if (buf[0] == '~') rv = ~rv;
 	return rv;

@@ -17,7 +17,7 @@
 
 #ifdef ENABLE_UARTIF
 #define RECVBUFLEN 64
-const unsigned char prompt[] PROGMEM = "\x0D\x0AM168>";
+const unsigned char prompt[] PROGMEM = "\x0D\x0AM328>";
 unsigned char recvbuf[RECVBUFLEN];
 unsigned char token_count;
 unsigned char* tokenptrs[MAXTOKENS];
@@ -51,12 +51,12 @@ static void noints(void) {
 void mini_mainloop(void) {
 	timer_run();
 	adc_run();
-	uartif_run();
 	backlight_run();
 	tui_alarm_run();
 	batlvl_run();
 	relay_run();
 	dallas_run();
+	uartif_run();
 }
 
 void main (void) __attribute__ ((noreturn));

@@ -8,6 +8,7 @@
 #include "dallas.h"
 #include "rtc.h"
 #include "adc.h"
+#include "i2c.h"
 #include "i2c-uart.h"
 
 // I2C UART test menu start
@@ -41,7 +42,7 @@ static uint8_t tui_baud_printer(unsigned char*buf, int32_t v) {
 
 const unsigned char tui_dm_s7[] PROGMEM = "I2C UART TESTS";
 static void tui_i2cuart_menu(void) {
-	static uint8_t i2cuart_addr = 0x90;
+	static uint8_t i2cuart_addr = 0x98;
 	uint8_t sel=0;
 	for (;;) {
 		sel = tui_gen_listmenu((PGM_P)tui_dm_s7, tui_um_table, 5, sel);
@@ -57,7 +58,7 @@ static void tui_i2cuart_menu(void) {
 				uint16_t rv = i2cuart_init(i2cuart_addr,baudrate);
 				lcd_clear();
 				luint2str(buf,rv);
-				lcd_gotoxy(4,0);
+				lcd_gotoxy(2,0);
 				lcd_puts_P(PSTR("POLL PERIOD:"));
 				lcd_gotoxy((LCD_MAXX-strlen((char*)buf))>>1,1);
 				lcd_puts(buf);
@@ -89,6 +90,7 @@ static void tui_i2cuart_menu(void) {
 							}
 						}
 					}
+					timer_set_waiting();
 					x = buttons_get();
 					mini_mainloop();
 				}
@@ -113,9 +115,23 @@ static void tui_i2cuart_menu(void) {
 	}
 }
 
-// Debug Info Menu start	
+const unsigned char tui_dm_s6[] PROGMEM = "I2C SCAN";
 
+void tui_i2c_scan(void) {
+	unsigned char buf[5];
+	buf[4] = 0;
+	for (uint16_t a=0;a<0x100;a+=2) {
+		uint8_t v = i2c_start(a);
+		if (v==0) {
+			i2c_stop();
+			tui_hexbyte_printer(buf,a);
+			tui_gen_message_m(PSTR("FOUND DEVICE:"),buf);
+		}
+	}
+	tui_gen_message((PGM_P)tui_dm_s6,PSTR("END OF LIST"));
+}
 
+// Debug Info Menu start
 const unsigned char tui_dm_s1[] PROGMEM = "UPTIME";
 const unsigned char tui_dm_s2[] PROGMEM = "RTC INFO";
 const unsigned char tui_dm_s3[] PROGMEM = "ADC SAMPLES/S";
@@ -127,6 +143,7 @@ PGM_P const tui_dm_table[] PROGMEM = {
     (PGM_P)tui_dm_s3, // adc samples
     (PGM_P)tui_dm_s4, // 5hz counter
     (PGM_P)tui_dm_s5, // Raw ADC view
+    (PGM_P)tui_dm_s6, // I2C SCAN
     (PGM_P)tui_dm_s7, // I2C UART
     (PGM_P)tui_exit_menu, // exit
 };
@@ -361,9 +378,9 @@ void tui_adc_calibrate(void) {
 
 const unsigned char tui_om_s5[] PROGMEM = "DEBUG INFO";
 static void tui_debuginfomenu(void) {
-	uint8_t sel=0;	
+	uint8_t sel=0;
 	for (;;) {
-		sel = tui_gen_listmenu((PGM_P)tui_om_s5, tui_dm_table, 7, sel);
+		sel = tui_gen_listmenu((PGM_P)tui_om_s5, tui_dm_table, 8, sel);
 		switch (sel) {
 			case 0:
 				tui_uptime();
@@ -380,16 +397,20 @@ static void tui_debuginfomenu(void) {
 			case 2: 
 				tui_adc_ss();
 				break;
-			
+
 			case 3:
 				tui_timer_5hzcnt();
 				break;
-			
+
 			case 4:
 				tui_raw_adc_view();
 				break;
-			
+
 			case 5:
+				tui_i2c_scan();
+				break;
+
+			case 6:
 				tui_i2cuart_menu();
 				break;
 			default:

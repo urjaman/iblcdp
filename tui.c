@@ -119,14 +119,29 @@ uint16_t tui_gen_nummenu(PGM_P header, uint16_t min, uint16_t max, uint16_t star
 }
 
 
-void tui_gen_message(PGM_P l1, PGM_P l2) {
+static void tui_gen_message_start(PGM_P l1) {
 	lcd_clear();
 	lcd_gotoxy((16 - strlen_P(l1))/2,0);
 	lcd_puts_P(l1);
-	lcd_gotoxy((16 - strlen_P(l2))/2,1);
-	lcd_puts_P(l2);
+}
+
+static void tui_gen_message_end(void) {
 	timer_delay_ms(100);
 	tui_waitforkey();
+}
+
+void tui_gen_message(PGM_P l1, PGM_P l2) {
+	tui_gen_message_start(l1);
+	lcd_gotoxy((16 - strlen_P(l2))/2,1);
+	lcd_puts_P(l2);
+	tui_gen_message_end();
+}
+
+void tui_gen_message_m(PGM_P l1, const unsigned char* l2m) {
+	tui_gen_message_start(l1);
+	lcd_gotoxy((16 - strlen((const char*)l2m))/2,1);
+	lcd_puts(l2m);
+	tui_gen_message_end();
 }
 
 const unsigned char tui_q_s1[] PROGMEM = "NO";

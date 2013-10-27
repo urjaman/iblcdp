@@ -10,7 +10,7 @@ AVRDUDEMCU=m328
 AVRDUDECMD=sudo avrdude -p $(AVRDUDEMCU) -c avrispmkII -P usb
 REMOTEHOST=sempron
 AVRDUDECMD_REMOTE=/usr/avr/bin/avrdude -p $(AVRDUDEMCU) -c avrispmkII -P usb
-#DFLAGS=-DALARMCLOCK
+DFLAGS=-DALARMCLOCK
 CFLAGS=-mmcu=$(MMCU) -Os -g -Wall -W -pipe -mcall-prologues -std=gnu99 -Wno-main $(DFLAGS)
  
 $(PROJECT).hex: $(PROJECT).out

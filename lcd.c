@@ -170,7 +170,7 @@ void lcd_putchar(unsigned char c) {
       hd44780_outdata(c);
 }
 
-void lcd_puts(unsigned char * str) {
+void lcd_puts(const unsigned char * str) {
 start:
 	if (*str) lcd_putchar(*str);
 	else return;

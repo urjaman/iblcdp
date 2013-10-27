@@ -2,6 +2,7 @@
 #include "timer.h"
 #include "buttons.h"
 #include "rtc.h"
+#include "cron.h"
 
 /* This part is the non-calendar/date/time-related part. Just uptimer, etc. */
 uint8_t timer_waiting=0;
@@ -11,16 +12,18 @@ static uint32_t secondstimer=0;
 static uint8_t timer5hz=0; // Linear 8-bit counter at 5hz, rolls over every 51s.
 static uint8_t timer5hz_todo=0; // Used to fix linear counter if a 5hz pulse is missed.
 
-static void timer_gen_5hzp(void) {
+static uint16_t timer_gen_5hzp(void) {
 	static uint8_t state=0;
 	timer_5hzp=0;
 	if (timer_1hzp) {
 		state=0;
 	}
-	if (timer_get_subsectimer()>=((SSTC/5)*state)) {
+	uint16_t rv;
+	if ((rv=timer_get_subsectimer())>=((SSTC/5)*state)) {
 		timer_5hzp=1;
 		state++;
 	}
+	return rv;
 }
 
 void timer_delay_us(uint24_t us) {
@@ -41,7 +44,13 @@ void timer_set_waiting(void) {
 /* This is the interface from non-calendar time to calendar time functions. */
 static void timer_time_tick();
 
+
+void cron_initialize(void);
+uint16_t cron_next_task(void);
+uint16_t cron_run_tasks(void);
+
 void timer_run(void) {
+	uint16_t ncront = cron_next_task();
 	timer_1hzp=0;
 	for (;;) {
 		if (timer_getdec_todo()) {
@@ -50,12 +59,15 @@ void timer_run(void) {
 			timer5hz += timer5hz_todo;
 			timer5hz_todo = 5;
 			timer_time_tick();
+			cron_initialize();
+			ncront = cron_next_task();
 		}
-		timer_gen_5hzp();
+		uint16_t ss = timer_gen_5hzp();
 		if (timer_5hzp) {
 			timer5hz++;
 			timer5hz_todo--;
 		}
+		if (ss>=ncront) ncront = cron_run_tasks();
 		if ((timer_5hzp)||(timer_1hzp)||(timer_waiting)||(buttons_get_v())) {
 			timer_waiting=0;
 			break;

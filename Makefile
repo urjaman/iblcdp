@@ -1,7 +1,7 @@
 # AVR-GCC Makefile
 PROJECT=carlcdp
-SOURCES=main.c uart.c console.c lib.c appdb.c commands.c hd44780.c lcd.c timer.c backlight.c buttons.c adc.c relay.c tui.c saver.c tui-other.c dallas.c tui-modules.c tui-calc.c tui-temp.c batlvl.c time.c i2c.c rtc.c tui-alarm.c poweroff.c i2c-uart.c
-DEPS=Makefile buttons.h i2c-uart.h main.h
+SOURCES=main.c uart.c console.c lib.c appdb.c commands.c hd44780.c lcd.c timer.c backlight.c buttons.c adc.c relay.c tui.c saver.c tui-other.c dallas.c tui-modules.c tui-calc.c tui-temp.c batlvl.c time.c i2c.c rtc.c tui-alarm.c poweroff.c i2c-uart.c cron.c
+DEPS=Makefile buttons.h i2c-uart.h main.h cron.h
 CC=avr-gcc
 OBJCOPY=avr-objcopy
 MMCU=atmega328p

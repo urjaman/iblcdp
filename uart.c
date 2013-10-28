@@ -4,6 +4,7 @@
 #include "console.h"
 #include "timer.h"
 #include "i2c-uart.h"
+#include "cron.h"
 #ifdef ENABLE_UARTMODULE
 
 // UART MODULE START
@@ -98,14 +99,19 @@ static uint8_t i2cuart_buf[I2CUART_MAX_RX];
 static uint8_t i2cuart_buf_sz = 0;
 static uint8_t i2cuart_buf_of = 0;
 
+static void i2cuart_poll_task(void);
+static struct cron_task i2cuart_poll = { NULL, i2cuart_poll_task, SSTC, 0 };
+
+
 void uart_wait_txdone(void) { }
 
 void uart_init(void) {
 	i2cuart_buf_sz = 0;
 	i2cuart_buf_of = 0;
 	if (i2cuart_exists(ENABLE_I2CUARTCON)) {
-		i2cuart_init(ENABLE_I2CUARTCON, BAUD);
+		i2cuart_poll.ss_freq = i2cuart_init(ENABLE_I2CUARTCON, BAUD);
 		i2cuarthw_exists = 1;
+		cron_add_task(&i2cuart_poll);
 	} else {
 		i2cuarthw_exists = 0;
 	}
@@ -142,6 +148,15 @@ static uint8_t i2cuart_rx_data(void) {
 		i2cuart_buf_sz = d;
 	}
 	return d;
+}
+
+static void i2cuart_poll_task(void) {
+	if (uart_isdata()) {
+		timer_set_waiting();
+	}
+	if (!i2cuarthw_exists) {
+		cron_rm_task(&i2cuart_poll);
+	}
 }
 
 uint8_t uart_recv(void) {

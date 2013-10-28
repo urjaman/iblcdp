@@ -63,8 +63,8 @@ uint32_t mtm2linear(struct mtm * tm) {
 	return counter;
 }
 
-uint32_t mtm2lindate(struct mtm *tm) {
-	uint32_t counter=0; // Just count days.
+uint24_t mtm2lindate(struct mtm *tm) {
+	uint24_t counter=0; // Just count days.
 	for (uint8_t aj=0;aj<tm->year;aj++) {
 		counter += year_days(aj);
 	}
@@ -76,7 +76,7 @@ uint32_t mtm2lindate(struct mtm *tm) {
 	return counter;
 }
 
-void lindate2mtm(struct mtm*tm, uint32_t lindate) {
+void lindate2mtm(struct mtm*tm, uint24_t lindate) {
 	uint32_t days = lindate;
 	uint8_t year;
 	uint32_t days_compare=0;

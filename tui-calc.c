@@ -335,7 +335,7 @@ static void tui_fc_history_write_idx(uint8_t idx, struct tui_fc_history_entry *e
 	idx += tui_fc_history_offset;
 	if (idx>=TUI_FC_HISTORY_SIZE) idx = idx - TUI_FC_HISTORY_SIZE;
 	eeprom_update_block(e,(void*)TUI_FC_HISTORY_EE_DATA_ADDR+(idx*sizeof(struct tui_fc_history_entry)),sizeof(struct tui_fc_history_entry));
-}	
+}
 
 static void tui_fc_history_del_idx(uint8_t idx) {
 	uint8_t i;

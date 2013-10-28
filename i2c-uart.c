@@ -43,11 +43,12 @@
 /* Generic functions to handle an I2C UART. Address provided by module user. */
 
 /* Return value: recommended poll period in subsectimer units. */
-uint16_t i2cuart_init(uint8_t addr, uint32_t baud)
+uint16_t i2cuart_init(uint8_t addr, uint24_t baud)
 {
 	/* We can generate baud rates between 15 baud and 921600 without div-4. */
 	/* => Using the extra divisor not worth the code. */
 	/* TODO: Implement rounding if needed here. */
+	/* Note: cast baud to uint32_t if we need >1Mbaud. */
 	uint16_t divisor = UART_XTAL / (baud*16);
 	if (i2c_write_reg(addr,LCR,0x83)) goto err;
 	if (i2c_write_reg(addr,DLH,divisor>>8)) goto err;

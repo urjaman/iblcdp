@@ -19,7 +19,7 @@ static uint16_t timer_gen_5hzp(void) {
 		state=0;
 	}
 	uint16_t rv;
-	if ((rv=timer_get_subsectimer())>=((SSTC/5)*state)) {
+	if ((rv=timer_get_linear_ss_time())>=((SSTC/5)*state)) {
 		timer_5hzp=1;
 		state++;
 	}
@@ -30,7 +30,12 @@ void timer_delay_us(uint24_t us) {
 	uint24_t ss_start = timer_get_linear_ss_time();
 	if (us>200000) us = 200000; // Safety Limit for 5hzP
 	uint24_t ss_end = ss_start + (us/US_PER_SSUNIT) + 1;
-	while (timer_get_linear_ss_time()<ss_end) sleep_mode();
+	uint24_t ss_now;
+	uint16_t ncront = cron_next_task();
+	while ((ss_now=timer_get_linear_ss_time())<ss_end) {
+		if (ss_now>=ncront) ncront = cron_run_tasks();
+		sleep_mode();
+	}
 }
 
 void timer_delay_ms(uint8_t ms) {
@@ -44,11 +49,6 @@ void timer_set_waiting(void) {
 /* This is the interface from non-calendar time to calendar time functions. */
 static void timer_time_tick();
 
-
-void cron_initialize(void);
-uint16_t cron_next_task(void);
-uint16_t cron_run_tasks(void);
-
 void timer_run(void) {
 	uint16_t ncront = cron_next_task();
 	timer_1hzp=0;
@@ -58,8 +58,8 @@ void timer_run(void) {
 			timer_1hzp=1;
 			timer5hz += timer5hz_todo;
 			timer5hz_todo = 5;
-			timer_time_tick();
 			cron_initialize();
+			timer_time_tick();
 			ncront = cron_next_task();
 		}
 		uint16_t ss = timer_gen_5hzp();
@@ -130,7 +130,7 @@ static void timer_time_tick(void) {
 		return;
 	}
 	// We have no RTC and have to wing it on our own.
-	uint32_t tmp = timer_tm_now.sec+1;
+	uint24_t tmp = timer_tm_now.sec+1;
 	if (tmp>=60) {
 		tmp = timer_tm_now.min+1;
 		if (tmp>=60) {

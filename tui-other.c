@@ -10,6 +10,7 @@
 #include "adc.h"
 #include "i2c.h"
 #include "i2c-uart.h"
+#include "cron.h"
 
 // I2C UART test menu start
 
@@ -33,10 +34,10 @@ static uint8_t tui_hexbyte_printer(unsigned char*buf, int32_t v) {
 	return 4;
 }
 
-const uint32_t baud_table[] PROGMEM = { 9600, 19200, 38400, 57600, 115200 };
+const uint24_t baud_table[] PROGMEM = { 9600, 19200, 38400, 57600, 115200 };
 
 static uint8_t tui_baud_printer(unsigned char*buf, int32_t v) {
-	uint32_t v2 = pgm_read_dword(&(baud_table[v]));
+	uint24_t v2 = (uint24_t)(pgm_read_dword(&(baud_table[v])));
 	return luint2str(buf,v2);
 }
 
@@ -54,7 +55,7 @@ static void tui_i2cuart_menu(void) {
 				unsigned char buf[12];
 				i2cuart_addr = tui_gen_adjmenu(PSTR("I2C ADDR"),tui_hexbyte_printer,0x00,0xFF,i2cuart_addr,2);
 				uint8_t baudsel = tui_gen_adjmenu(PSTR("BAUD RATE"),tui_baud_printer,0,4,0,1);
-				uint32_t baudrate = pgm_read_dword(&baud_table[baudsel]);
+				uint24_t baudrate = (uint24_t)(pgm_read_dword(&baud_table[baudsel]));
 				uint16_t rv = i2cuart_init(i2cuart_addr,baudrate);
 				lcd_clear();
 				luint2str(buf,rv);
@@ -420,10 +421,20 @@ static void tui_debuginfomenu(void) {
 }
 // Useful tools start
 
+static volatile uint16_t stopwatch_timer=0;
+void stopwatch_taskf(void) {
+	uint16_t timer = stopwatch_timer;
+	timer += 1;
+	if (timer>=60000) timer=0;
+	stopwatch_timer = timer;
+	timer_set_waiting();
+}
+
 const unsigned char tui_om_s2[] PROGMEM = "STOPWATCH";
 static void tui_stopwatch(void) {
-	uint16_t timer=0;
 	unsigned char time[8];
+	stopwatch_timer = 0;
+	struct cron_task stopwatch_task = { NULL, stopwatch_taskf, SSTC/10, 0 };
 	// Format: mm:ss.s
 	lcd_clear();
 	lcd_gotoxy(3,0);
@@ -437,7 +448,7 @@ static void tui_stopwatch(void) {
 		mini_mainloop();
 		if (buttons_get_v()) break;
 	}
-	uint8_t last_5hztimer = timer_get_5hz_cnt();
+	cron_add_task(&stopwatch_task);
 	time[6] = time[4] = time[3] = time[1] = time[0] = '0';
 	time[2] = ':';
 	time[5] = '.';
@@ -449,10 +460,7 @@ static void tui_stopwatch(void) {
 		mini_mainloop();
 		if (timer_get_1hzp()) backlight_activate(); // Keep backlight on
 		uint16_t tt,t2;
-		uint8_t passed = timer_get_5hz_cnt() - last_5hztimer;
-		timer += passed*2;
-		last_5hztimer += passed;
-		if (timer>=60000) timer=0;
+		uint16_t timer = stopwatch_timer;
 		time[6] = 0x30 | (timer%10);
 		tt = timer/10;
 		t2 = tt%60;
@@ -465,6 +473,7 @@ static void tui_stopwatch(void) {
 		lcd_puts(time);
 		if (buttons_get_v()) break;
 	}
+	cron_rm_task(&stopwatch_task);
 	tui_waitforkey();
 }
 

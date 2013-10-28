@@ -259,7 +259,7 @@ static uint8_t tui_dtwd_mod(uint8_t* buf, uint8_t ml) {
 	struct mtm tm;
 	uint8_t mb[8];
 	tui_date_common(&tm,mb);
-	uint32_t ld = mtm2lindate(&tm) + EPOCH_DAY_OF_WEEK;
+	uint24_t ld = mtm2lindate(&tm) + EPOCH_DAY_OF_WEEK;
 	uint8_t wd = ld % 7UL;
 	uint8_t wdc1,wdc2;
 	wdc1 = pgm_read_byte(wdstr+wd*2+0);

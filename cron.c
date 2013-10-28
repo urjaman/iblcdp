@@ -6,9 +6,9 @@ static struct cron_task *chead = NULL;
 
 static void list_rm_task(struct cron_task *t)
 {
-	static struct cron_task * s;
-	static struct cron_task * p = NULL;
-	for (s=chead;s;s = s->next) {
+	struct cron_task *s = chead;
+	struct cron_task *p = NULL;
+	while (s) {
 		if (s==t) {
 			if (!p) {
 				chead = s->next;
@@ -17,19 +17,22 @@ static void list_rm_task(struct cron_task *t)
 			}
 		}
 		p = s;
+		s = s->next;
 	}
 }
 
-static void list_add_task(struct cron_task *t,uint16_t sstimer) {
+static void list_add_task(struct cron_task *t)
+{
 	/* Assumed: task isnt in the list. */
-	t->next_invoc = sstimer + t->ss_freq;
-	static struct cron_task * s;
-	static struct cron_task * p = NULL;
-	for (s=chead;s;s = s->next) {
+	struct cron_task * s = chead;
+	struct cron_task * p = NULL;
+	t->next_invoc += t->ss_freq;
+	while (s) {
 		if (s->next_invoc > t->next_invoc) {
 			break;
 		}
 		p = s;
+		s = s->next;
 	}
 	if (!p) {
 		t->next = chead;
@@ -43,7 +46,8 @@ static void list_add_task(struct cron_task *t,uint16_t sstimer) {
 
 void cron_add_task(struct cron_task *t) {
 	list_rm_task(t); /* Check that it isnt in the list. */
-	list_add_task(t,timer_get_subsectimer());
+	t->next_invoc = timer_get_linear_ss_time();
+	list_add_task(t);
 }
 
 void cron_rm_task(struct cron_task *t) {
@@ -52,21 +56,12 @@ void cron_rm_task(struct cron_task *t) {
 
 void cron_initialize(void) {
 	if (!chead) return;
-	/* Second changed. Re-build our list. */
+	/* Second changed. Change our list timing data. */
 	struct cron_task *s = chead;
-	chead = NULL;
 	while (s) {
-		struct cron_task *np = s->next;
-		list_add_task(s,0);
-		s = np;
-	}
-	/* And call everybody once at 0 ss units. */
-	/* This is how SSTC freq tasks get their run force. */
-	s = chead;
-	while (s) {
-		struct cron_task *np = s->next;
-		s->taskf();
-		s = np;
+		if (s->next_invoc>=SSTC) s->next_invoc -= SSTC;
+		else s->next_invoc = 0;
+		s = s->next;
 	}
 }
 
@@ -79,10 +74,9 @@ uint16_t cron_next_task(void) {
 /* Run the next task. */
 uint16_t cron_run_tasks(void) {
 	if (!chead) return SSTC;
-	uint16_t sstimer = timer_get_subsectimer();
 	struct cron_task *nt = chead;
 	nt->taskf();
 	chead = nt->next;
-	list_add_task(nt,sstimer);
+	list_add_task(nt);
 	return chead->next_invoc;
 }

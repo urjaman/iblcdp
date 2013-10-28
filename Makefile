@@ -1,7 +1,7 @@
 # AVR-GCC Makefile
 PROJECT=carlcdp
 SOURCES=main.c uart.c console.c lib.c appdb.c commands.c hd44780.c lcd.c timer.c backlight.c buttons.c adc.c relay.c tui.c saver.c tui-other.c dallas.c tui-modules.c tui-calc.c tui-temp.c batlvl.c time.c i2c.c rtc.c tui-alarm.c poweroff.c i2c-uart.c cron.c
-DEPS=Makefile buttons.h i2c-uart.h main.h cron.h
+DEPS=Makefile buttons.h i2c-uart.h main.h cron.h uart.h
 CC=avr-gcc
 OBJCOPY=avr-objcopy
 MMCU=atmega328p
@@ -17,7 +17,7 @@ $(PROJECT).hex: $(PROJECT).out
 	$(AVRBINDIR)$(OBJCOPY) -j .text -j .data -O ihex $(PROJECT).out $(PROJECT).hex
  
 $(PROJECT).out: $(SOURCES) timer-ll.o adc-ll.o
-	$(AVRBINDIR)$(CC) $(CFLAGS) -flto -fwhole-program -I./ -o $(PROJECT).out  $(SOURCES) timer-ll.o adc-ll.o -lc -lm
+	$(AVRBINDIR)$(CC) $(CFLAGS) -flto -fwhole-program -flto-partition=none -mrelax -I./ -o $(PROJECT).out  $(SOURCES) timer-ll.o adc-ll.o -lc -lm
 
 timer-ll.o: timer-ll.c timer.c main.h
 	$(AVRBINDIR)$(CC) $(CFLAGS) -I./ -c -o timer-ll.o timer-ll.c

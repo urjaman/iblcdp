@@ -75,6 +75,26 @@ uint24_t timer_get_linear_ss_time(void) {
 	return (uint24_t)todo*SSTC + sstimer;
 }
 
+uint16_t timer_get_lin_ss_u16(void) {
+	/* This is the above, but inline optimized and for u16 return. */
+	uint8_t todo;
+	uint16_t sstimer;
+	cli();
+	todo = timer_run_todo;
+	asm (
+	"lds %A0,subsectimer\n\t"
+	"sei\n\t"
+	"lds %B0,subsectimer+1\n\t"
+	: "=r" (sstimer)
+	: );
+	if (likely(!todo)) return sstimer;
+	if (likely(todo==1)) {
+		return SSTC+sstimer;
+	} else {
+		return 0xFFFF;
+	}
+}
+
 uint8_t timer_get_todo(void) {
 	uint8_t rv;
 	// cli is not needed here since timer_run_todo is uint8_t

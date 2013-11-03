@@ -28,6 +28,7 @@ uint16_t timer_get_subsectimer(void);
 uint8_t timer_getdec_todo(void);
 uint8_t timer_get_todo(void);
 uint24_t timer_get_linear_ss_time(void);
+uint16_t timer_get_lin_ss_u16(void);
 
 /* timer-ll.c is used to consolidate access to todo and subsectimer 
    to a single object */

@@ -46,7 +46,7 @@ static void list_add_task(struct cron_task *t)
 
 void cron_add_task(struct cron_task *t) {
 	list_rm_task(t); /* Check that it isnt in the list. */
-	t->next_invoc = timer_get_linear_ss_time();
+	t->next_invoc = timer_get_lin_ss_u16();
 	list_add_task(t);
 }
 
@@ -67,13 +67,13 @@ void cron_initialize(void) {
 
 /* Give timer the next time when to run a task. */
 uint16_t cron_next_task(void) {
-	if (!chead) return SSTC;
+	if (!chead) return 0xFFFF;
 	return chead->next_invoc;
 }
 
 /* Run the next task. */
 uint16_t cron_run_tasks(void) {
-	if (!chead) return SSTC;
+	if (!chead) return 0xFFFF;
 	struct cron_task *nt = chead;
 	nt->taskf();
 	chead = nt->next;

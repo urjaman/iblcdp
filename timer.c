@@ -19,7 +19,7 @@ static uint16_t timer_gen_5hzp(void) {
 		state=0;
 	}
 	uint16_t rv;
-	if ((rv=timer_get_linear_ss_time())>=((SSTC/5)*state)) {
+	if ((rv=timer_get_lin_ss_u16())>=((SSTC/5)*state)) {
 		timer_5hzp=1;
 		state++;
 	}

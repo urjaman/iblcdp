@@ -39,3 +39,6 @@ typedef __uint24 uint24_t;
 typedef int32_t int24_t;
 typedef uint32_t uint24_t;
 #endif
+
+#define likely(x)       __builtin_expect(!!(x), 1)
+#define unlikely(x)     __builtin_expect(!!(x), 0)

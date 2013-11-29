@@ -50,6 +50,14 @@ void tui_calc(void);
 void tui_calc_fuel_cost(void);
 void tui_calc_fc_history(void);
 
+struct tcalcstate {
+	uint32_t n1;
+	uint32_t n2;
+	uint8_t base;
+	uint8_t dpts;
+};
+void tui_calc_show_result(struct tcalcstate*s, PGM_P header, PGM_P unit);
+
 // This is maximum supported by the FC history viewer.
 #define TUI_FC_HISTORY_SIZE 100
 

@@ -138,6 +138,7 @@ const unsigned char tui_dm_s2[] PROGMEM = "RTC INFO";
 const unsigned char tui_dm_s3[] PROGMEM = "ADC SAMPLES/S";
 const unsigned char tui_dm_s4[] PROGMEM = "5HZ COUNTER";
 const unsigned char tui_dm_s5[] PROGMEM = "RAW ADC VIEW";
+const unsigned char tui_dm_s8[] PROGMEM = "SPIN TEST";
 PGM_P const tui_dm_table[] PROGMEM = {
     (PGM_P)tui_dm_s1, // uptime
     (PGM_P)tui_dm_s2, // rtc info
@@ -146,8 +147,28 @@ PGM_P const tui_dm_table[] PROGMEM = {
     (PGM_P)tui_dm_s5, // Raw ADC view
     (PGM_P)tui_dm_s6, // I2C SCAN
     (PGM_P)tui_dm_s7, // I2C UART
+    (PGM_P)tui_dm_s8, // SPIN TEST
     (PGM_P)tui_exit_menu, // exit
 };
+
+void tui_spin_test(void) {
+	struct tcalcstate s = { 0, 0, 10, 0 };
+	lcd_clear();
+	if (buttons_get()) {
+		while (buttons_get_v()) mini_mainloop();
+	}
+	for(;;) {
+		mini_mainloop();
+		if (timer_get_1hzp()) break;
+	}
+	for (;;) {
+		timer_set_waiting();
+		mini_mainloop();
+		if (timer_get_1hzp()) break;
+		s.n1++;
+	}
+	tui_calc_show_result(&s,PSTR("RESULT:"),PSTR(""));
+}
 
 void tui_time_print(uint32_t nt) {
 	unsigned char time[16];
@@ -381,7 +402,7 @@ const unsigned char tui_om_s5[] PROGMEM = "DEBUG INFO";
 static void tui_debuginfomenu(void) {
 	uint8_t sel=0;
 	for (;;) {
-		sel = tui_gen_listmenu((PGM_P)tui_om_s5, tui_dm_table, 8, sel);
+		sel = tui_gen_listmenu((PGM_P)tui_om_s5, tui_dm_table, 9, sel);
 		switch (sel) {
 			case 0:
 				tui_uptime();
@@ -413,6 +434,9 @@ static void tui_debuginfomenu(void) {
 
 			case 6:
 				tui_i2cuart_menu();
+				break;
+			case 7:
+				tui_spin_test();
 				break;
 			default:
 				return;

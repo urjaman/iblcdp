@@ -86,13 +86,6 @@ PGM_P const tui_cm_table[] PROGMEM = {
 };
 
 
-struct tcalcstate {
-	uint32_t n1;
-	uint32_t n2;
-	uint8_t base;
-	uint8_t dpts;
-};
-
 static void tui_calc_alt_entry(PGM_P header, struct tcalcstate *s, uint32_t min, uint32_t max, uint32_t speed1, uint32_t speed2, uint32_t spd_step1,uint32_t spd_step2) {
 	unsigned char buf[17];
 	unsigned char line[17];
@@ -116,21 +109,20 @@ rekey:
 				speed=1;
 				speed_step=spd_step1;
 				goto rekey;
-			
+
 			case BUTTON_S1:
 				if ((num+speed)>max) num = max;
 				else num += speed;
 				break;
-			
+
 			case BUTTON_S2:
-				if (((num-speed)<min)||((num-speed)>max)) num = min;
+				if (((num-speed) < min)||((num-speed) > max)) num = min;
 				else num -= speed;
 				break;
-			
+
 			case BUTTON_BOTH:
 				s->n1 = num;
 				return;
-		
 		}
 		if (key) {
 			speed_step--;
@@ -228,7 +220,7 @@ static void tui_do_calc_op(struct tcalcstate *s, uint8_t op) {
 	uint32_t e=1;
 	// auto-dpts support:
 	if ((op==3)&&(s->dpts==0)&&(s->n1%s->n2)) {
-		if ((labs(s->n1)<4294)&&(labs(s->n2)<4294967)) {
+		if ((labs(s->n1) < 4294)&&(labs(s->n2) < 4294967)) {
 		s->dpts = 3;
 		s->n1 *= 1000;
 		s->n2 *= 1000;
@@ -240,7 +232,13 @@ static void tui_do_calc_op(struct tcalcstate *s, uint8_t op) {
 		case 0: s->n1 = s->n1 + s->n2; break;
 		case 1: s->n1 = s->n1 - s->n2; break;
 		case 2: s->n1 = (s->n1 * s->n2) / e; break;
-		case 3: s->n1 = (s->n1 * e) / s->n2; break;
+		case 3: if (e>1) {
+				s->n1 = ( (s->n1 * e)+(s->n2/2) ) / s->n2;
+				break;
+			} else {
+				s->n1 = s->n1 / s->n2;
+				break;
+			}
 		case 4: s->n1 = s->n1 % s->n2; break;
 		case 5: s->n1 = s->n1 & s->n2; break;
 		case 6: s->n1 = s->n1 | s->n2; break;
@@ -249,7 +247,7 @@ static void tui_do_calc_op(struct tcalcstate *s, uint8_t op) {
 }
 
 
-static void tui_show_calc_result(struct tcalcstate*s, PGM_P header, PGM_P unit) {
+void tui_calc_show_result(struct tcalcstate*s, PGM_P header, PGM_P unit) {
 	unsigned char buf[16];
 	uint8_t x = strlen_P(header);
 	lcd_clear();
@@ -272,12 +270,12 @@ void tui_calc(void) {
 	tui_calc_entry(&s,1);
 	tui_calc_entry(&s,2);
 	op = tui_gen_listmenu(PSTR("PICK OPERATION"), tui_com_table, ((s.base==10)&&(s.dpts))?4:8, 0);
-	
+
 	tui_do_calc_op(&s,op);
 	dptsr = s.dpts;
 	n1r = s.n1;
 	baser = s.base;
-	tui_show_calc_result(&s, PSTR("RESULT:"), PSTR(""));
+	tui_calc_show_result(&s, PSTR("RESULT:"), PSTR(""));
 }
 
 
@@ -395,14 +393,14 @@ void tui_calc_fuel_cost(void) {
 	litres = (km*efficiency)/1000;
 	s.n1 = (litres*price)/1000;
 	// 4. Show FC estimate
-	tui_show_calc_result(&s,PSTR("FUEL COST:"),PSTR(" \x08"));
+	tui_calc_show_result(&s,PSTR("FUEL COST:"),PSTR(" \x08"));
 	// 5. Verify/Ask Litres
 	s.n1 = litres;
 	tui_calc_alt_entry(PSTR("LITRES:"),&s,20,65535,10,100,10,10);
 	litres = s.n1;
 	// 6. Calculate and show fuel efficiency
 	s.n1 = (litres*1000)/km;
-	tui_show_calc_result(&s,PSTR("EFFICIENCY:"),PSTR(" L/100KM"));
+	tui_calc_show_result(&s,PSTR("EFFICIENCY:"),PSTR(" L/100KM"));
 	// 7. Verify/Ask date
 	uint16_t lindate;
 	if (!timer_time_isvalid()) { // Use the normal time setting menu.

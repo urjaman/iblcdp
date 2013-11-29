@@ -108,14 +108,10 @@ ISR(ADC_vect, ISR_NAKED) {
 	"st Y, r30\n\t"
 	"std Y+1, r31\n\t"
 	"ldd r30, Y+2\n\t"
-	"ldd r31, Y+3\n\t"
 	"adc r30, r16\n\t"
-	"adc r31, r16\n\t"
 	"std Y+2, r30\n\t"
-	"std Y+3, r31\n\t"
 // Inline end
-	"ldi r28, lo8(adc_isr_out+4)\n\t"
-	"ldi r29, hi8(adc_isr_out+4)\n\t"
+	// load Y skipped and inline modified, Y+4
 	"ldi r30, lo8(adc_isr_supersample+2)\n\t"
 	"ldi r31, hi8(adc_isr_supersample+2)\n\t"
 //	"rcall adc_isr_forloop\n\t" Inlined here:
@@ -123,18 +119,15 @@ ISR(ADC_vect, ISR_NAKED) {
 	"ldd r25, Z+1\n\t"
 	"st Z, r16\n\t"
 	"std Z+1, r16\n\t"
-	"ld r30, Y\n\t"
-	"ldd r31, Y+1\n\t"
+	"ldd r30, Y+4\n\t"
+	"ldd r31, Y+5\n\t"
 	"add r30, r24\n\t"
 	"adc r31, r25\n\t"
-	"st Y, r30\n\t"
-	"std Y+1, r31\n\t"
-	"ldd r30, Y+2\n\t"
-	"ldd r31, Y+3\n\t"
+	"std Y+4, r30\n\t"
+	"std Y+5, r31\n\t"
+	"ldd r30, Y+6\n\t"
 	"adc r30, r16\n\t"
-	"adc r31, r16\n\t"
-	"std Y+2, r30\n\t"
-	"std Y+3, r31\n\t"
+	"std Y+6, r30\n\t"
 // Inline end
 	"lds r24, adc_isr_out_cnt\n\t"
 	"lds r25, adc_isr_out_cnt+1\n\t"
@@ -177,7 +170,7 @@ void adc_init_ll(void) {
 }
 
 uint16_t adc_run_ll(uint16_t adc_values[ADC_MUX_CNT], uint16_t minv[ADC_MUX_CNT], uint16_t maxv[ADC_MUX_CNT]) {
-	uint32_t copy_out[ADC_MUX_CNT];
+	uint24_t copy_out[ADC_MUX_CNT];
 	uint16_t copy_min[ADC_MUX_CNT];
 	uint16_t copy_max[ADC_MUX_CNT];
 	uint16_t copy_count=0;
@@ -197,7 +190,7 @@ uint16_t adc_run_ll(uint16_t adc_values[ADC_MUX_CNT], uint16_t minv[ADC_MUX_CNT]
 	sei();
 	if (copy_count) {
 		for (uint8_t i=0;i<ADC_MUX_CNT;i++) {
-			adc_values[i]= ((uint16_t)((uint32_t)(copy_out[i]/(uint32_t)copy_count)))>>2;
+			adc_values[i]= ((uint16_t)((uint24_t)(copy_out[i]/(uint24_t)copy_count)))>>2;
 			maxv[i] = copy_max[i]<<2;
 			minv[i] = copy_min[i]<<2;
 		}
@@ -220,11 +213,8 @@ void adc_isr_forloop(void) {
 	"st Y, r30\n\t"
 	"std Y+1, r31\n\t"
 	"ldd r30, Y+2\n\t"
-	"ldd r31, Y+3\n\t"
 	"adc r30, r16\n\t"
-	"adc r31, r16\n\t"
 	"std Y+2, r30\n\t"
-	"std Y+3, r31\n\t"
 	"ret\n\t"
 	::
 	);

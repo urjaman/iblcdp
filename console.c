@@ -2,6 +2,7 @@
 #include "main.h"
 #include "uart.h"
 #include "console.h"
+#include "lib.h"
 
 #define CR 0x0D
 #define LF 0x0A
@@ -10,6 +11,7 @@
 #define SPACE 0x20
 
 #ifdef ENABLE_UARTIF
+
 void sendstr_P(PGM_P str) {
 	unsigned char val;
 	for(;;) {
@@ -17,8 +19,8 @@ void sendstr_P(PGM_P str) {
 		if (val) SEND(val);
 		else break;
 		str++;
-		}
 	}
+}
 
 // rv=1 == got a line, 0= call me again
 unsigned char getline_mc(unsigned char* buf, uint8_t len) {
@@ -50,8 +52,8 @@ void sendstr(const unsigned char * str) {
 		if (val) SEND(val);
 		else break;
 		str++;
-		}
 	}
+}
 
 unsigned char* scanfor_notspace(unsigned char *buf) {
 	for (;;) {
@@ -59,7 +61,7 @@ unsigned char* scanfor_notspace(unsigned char *buf) {
 		if (!isspace(*buf)) return buf;
 		buf++;
 	}
-	}
+}
 
 unsigned char* scanfor_space(unsigned char *buf) {
 	for (;;) {
@@ -67,7 +69,7 @@ unsigned char* scanfor_space(unsigned char *buf) {
 		if (isspace(*buf)) return buf;
 		buf++;
 	}
-	}
+}
 
 static unsigned char count_tokens(unsigned char *rcvbuf) {
 	unsigned char tokens=0;
@@ -79,7 +81,7 @@ static unsigned char count_tokens(unsigned char *rcvbuf) {
 		if (!(*rcvbuf)) break;
 	}
 	return tokens;
-	}
+}
 
 void tokenize(unsigned char *rcvbuf,unsigned char** ptrs, uint8_t* tkcntptr) {
 	uint8_t i;
@@ -98,6 +100,6 @@ void tokenize(unsigned char *rcvbuf,unsigned char** ptrs, uint8_t* tkcntptr) {
 	}
 	if (ptrs[0]) strupr((char*)ptrs[0]);
 	return;
-	}
+}
 
 #endif

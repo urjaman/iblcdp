@@ -1,8 +1,7 @@
 #include "main.h"
 #include "timer.h"
-#include "buttons.h"
-#include "rtc.h"
 #include "cron.h"
+#include "uart.h"
 
 /* This part is the non-calendar/date/time-related part. Just uptimer, etc. */
 uint8_t timer_waiting=0;
@@ -68,7 +67,7 @@ void timer_run(void) {
 			timer5hz_todo--;
 		}
 		if (ss>=ncront) ncront = cron_run_tasks();
-		if ((timer_5hzp)||(timer_1hzp)||(timer_waiting)||(buttons_get_v())) {
+		if ((timer_5hzp)||(timer_1hzp)||(timer_waiting)||uart_isdata()) {
 			timer_waiting=0;
 			break;
 		}
@@ -98,7 +97,7 @@ uint8_t timer_get_5hz_cnt(void) {
 /*******************************************/
 
 // Time ticking without RTC is considered valid for this time.
-#define TIME_NONRTC_VALID_TIME (6*60*60)
+//#define TIME_NONRTC_VALID_TIME (365*24*60*60)
 
 uint32_t timer_time_last_valid_moment=0;
 uint8_t timer_time_valid=0;
@@ -108,7 +107,7 @@ void timer_set_time(struct mtm *tm) {
 	timer_tm_now = *tm;
 	timer_time_valid = 1;
 	timer_time_last_valid_moment = secondstimer;
-	rtc_write(tm); // If there is an RTC, set time into it.
+//	rtc_write(tm); // If there is an RTC, set time into it.
 }
 
 
@@ -121,6 +120,7 @@ uint8_t timer_time_isvalid(void) {
 }
 
 static void timer_time_tick(void) {
+#if 0
 	uint8_t rv;
 	struct mtm rtctime;
 	if ((rv=rtc_read(&rtctime))==0) { // We have RTC and it is valid, take it as the absolute truth.
@@ -129,6 +129,7 @@ static void timer_time_tick(void) {
 		timer_time_last_valid_moment = secondstimer;
 		return;
 	}
+#endif
 	// We have no RTC and have to wing it on our own.
 	uint24_t tmp = timer_tm_now.sec+1;
 	if (tmp>=60) {
@@ -147,6 +148,7 @@ static void timer_time_tick(void) {
 		tmp = 0;
 	}
 	timer_tm_now.sec = tmp;
+#if 0
 	// Time incremented. Check if it is valid and whether it should still be valid.
 	if (timer_time_valid) {
 		uint32_t passed = secondstimer - timer_time_last_valid_moment;
@@ -155,4 +157,5 @@ static void timer_time_tick(void) {
 	if ((timer_time_valid)&&(rv==2)) { // RTC did exist but had no time, and our time is still valid, set RTC.
 		rtc_write(&timer_tm_now);
 	}
+#endif
 }

@@ -1,19 +1,11 @@
 /* GENERIC DEFINITIONS FOR PROJECT */
-// Nominal HZ:
-//#define F_CPU 8000000
-// Measured HZ (iter 1):
-//#define F_CPU 7967744
-// Measured HZ (iter 2):
-//#define F_CPU 8032512
-// Measured HZ (iter 3):
-#define F_CPU 8045824
+#define F_CPU 16000000
 #include <util/delay.h>
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <avr/sleep.h>
 #include <avr/pgmspace.h>
 #include <avr/eeprom.h>
-#include <avr/power.h>
 #include <avr/sleep.h>
 #include <util/delay.h>
 #include <ctype.h>
@@ -26,8 +18,7 @@ extern unsigned char token_count;
 extern unsigned char* tokenptrs[];
 
 #define ENABLE_UARTIF
-//#define ENABLE_UARTMODULE // THIS IS THE OLD HW HWUART
-#define ENABLE_I2CUARTCON 0x98
+#define ENABLE_UARTMODULE
 
 /* Enable 24-bit types as an optimization for gcc 4.7+ */
 #if (((__GNUC__ == 4)&&(__GNUC_MINOR__ >= 7)) || (__GNUC__ > 4))

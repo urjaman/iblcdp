@@ -51,9 +51,10 @@ uint16_t timer_get_subsectimer(void) {
 	return rv;
 }
 
-void timer_init(void) { // Timer0 is being run in PWM mode by the backlight init already, so only enable OVF interrupt
+void timer_init(void) {
 	timer_run_todo=0;
 	timer_waiting=1;
+	TCCR0B = _BV(CS00);
 	TIMSK0 |= _BV(TOIE0);
 }
 
@@ -88,7 +89,7 @@ uint16_t timer_get_lin_ss_u16(void) {
 	: "=r" (sstimer)
 	: );
 	if (likely(!todo)) return sstimer;
-	if (likely(todo==1)) {
+	if ((todo==1)&&(sstimer < 3036)) {
 		return SSTC+sstimer;
 	} else {
 		return 0xFFFF;

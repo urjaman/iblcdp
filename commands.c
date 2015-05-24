@@ -3,12 +3,7 @@
 #include "console.h"
 #include "lib.h"
 #include "appdb.h"
-#include "lcd.h"
-#include "backlight.h"
 #include "timer.h"
-#include "buttons.h"
-#include "adc.h"
-#include "relay.h"
 
 #ifdef ENABLE_UARTIF
 
@@ -21,76 +16,6 @@ void echo_cmd(void) {
 	for (i=1;i<token_count;i++) {
 		sendstr(tokenptrs[i]);
 		SEND(' ');
-	}
-}
-
-void lcdinit_cmd(void) {
-	lcd_init();
-}
-
-void lcdsay_cmd(void) {
-	uint8_t i,n=0;
-	lcd_clear();
-	for (i=1;i<token_count;i++) {
-		n += strlen((char*)tokenptrs[i])+1;
-		if (n>32) break;
-		if ((n > 16)&&(n<=32)) lcd_gotoxy(n&0xF,1);
-		lcd_puts(tokenptrs[i]);
-		lcd_putchar(' ');
-	}
-}
-
-void blset_cmd(void) {
-	if (token_count >= 2) {
-		uint8_t brightness= astr2luint(tokenptrs[1]);
-		backlight_activate();
-		backlight_set(brightness);
-		if (token_count >= 3) {
-			uint8_t to = astr2luint(tokenptrs[2]);
-			backlight_set_to(to);
-		}
-	}
-}
-
-void btns_cmd(void) {
-	uint8_t v = buttons_get();
-	sendstr_P(PSTR("BUTTON_"));
-	switch (v) {
-		default:
-			sendstr_P(PSTR("UNKNOWN"));
-			break;
-		case BUTTON_S1:
-			sendstr_P(PSTR("S1"));
-			break;
-		case BUTTON_S2:
-			sendstr_P(PSTR("S2"));
-			break;
-		case BUTTON_NONE:
-			sendstr_P(PSTR("NONE"));
-			break;
-		case BUTTON_BOTH:
-			sendstr_P(PSTR("BOTH"));
-			break;
-	}
-}
-
-void adc_cmd(void) {
-	unsigned char buf[7];
-	adc_print_v(buf,adc_read_mb());
-	sendstr(buf);
-	sendcrlf();
-	adc_print_v(buf,adc_read_sb());
-	sendstr(buf);
-}
-
-void relay_cmd(void) {
-	if (token_count >= 2) {
-		uint8_t mode= astr2luint(tokenptrs[1]);
-		relay_set(mode);
-		if (token_count >= 3) {
-			uint16_t v = astr2luint(tokenptrs[2]);
-			relay_set_autovoltage(v);
-		}
 	}
 }
 
@@ -199,10 +124,6 @@ void calc_cmd(void) {
 	luint2outdual(val1);
 }
 
-
-void timer_cmd(void) {
-	luint2outdual(timer_get());
-}
 
 void help_cmd(void) {
 	uint8_t i;

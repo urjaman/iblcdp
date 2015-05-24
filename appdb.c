@@ -6,25 +6,11 @@
 
 const unsigned char echostr[] PROGMEM = "ECHO";
 const unsigned char calcstr[] PROGMEM = "CALC";
-const unsigned char lcdinitstr[] PROGMEM = "LCDINIT";
-const unsigned char lcdsaystr[] PROGMEM = "LCDSAY";
-const unsigned char blsetstr[] PROGMEM = "BLSET";
-const unsigned char timerstr[] PROGMEM = "TIMER";
-const unsigned char btnsstr[] PROGMEM = "BTNS";
-const unsigned char adcstr[] PROGMEM = "ADC";
-const unsigned char relaystr[] PROGMEM = "RELAY";
 const unsigned char helpstr[] PROGMEM = "?";
 
 const struct command_t appdb[] PROGMEM = {
 	{(PGM_P)echostr, &(echo_cmd)},
 	{(PGM_P)calcstr, &(calc_cmd)},
-	{(PGM_P)lcdinitstr, &(lcdinit_cmd)},
-	{(PGM_P)lcdsaystr, &(lcdsay_cmd)},
-	{(PGM_P)blsetstr, &(blset_cmd)},
-	{(PGM_P)timerstr, &(timer_cmd)},
-	{(PGM_P)btnsstr, &(btns_cmd)},
-	{(PGM_P)adcstr, &(adc_cmd)},
-	{(PGM_P)relaystr, &(relay_cmd)},
 	{(PGM_P)helpstr, &(help_cmd)},
 	{NULL,NULL}
 };

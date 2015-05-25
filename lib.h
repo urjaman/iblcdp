@@ -10,3 +10,5 @@ uint8_t str2uchar(unsigned char *buf);
 uint8_t xstr2uchar(unsigned char *buf);
 uint32_t astr2luint(unsigned char *buf);
 
+void dprint_hb(uint8_t b);
+void dprint_hl(uint32_t b);

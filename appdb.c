@@ -6,11 +6,13 @@
 
 const unsigned char echostr[] PROGMEM = "ECHO";
 const unsigned char calcstr[] PROGMEM = "CALC";
+const unsigned char avrpstr[] PROGMEM = "AVRP";
 const unsigned char helpstr[] PROGMEM = "?";
 
 const struct command_t appdb[] PROGMEM = {
 	{(PGM_P)echostr, &(echo_cmd)},
 	{(PGM_P)calcstr, &(calc_cmd)},
+	{(PGM_P)avrpstr, &(avrp_cmd)},
 	{(PGM_P)helpstr, &(help_cmd)},
 	{NULL,NULL}
 };

@@ -1,5 +1,19 @@
 #include "main.h"
+#include "console.h"
+#include "uart.h"
 #include "lib.h"
+
+void dprint_hb(uint8_t b) {
+	uint8_t buf[3];
+	uchar2xstr(buf,b);
+	sendstr(buf);
+}
+
+void dprint_hl(uint32_t b) {
+	uint8_t buf[10];
+	luint2xstr(buf,b);
+	sendstr(buf);
+}
 
 static unsigned char hextab_func(unsigned char offset) {
 	offset |= 0x30;

@@ -1,7 +1,7 @@
 # AVR-GCC Makefile
 PROJECT=iblcdm64c1
-SOURCES=main.c uart.c console.c lib.c appdb.c commands.c timer.c time.c cron.c uart_tx.S
-DEPS=Makefile main.h cron.h uart.h
+SOURCES=main.c uart.c console.c lib.c appdb.c commands.c timer.c time.c cron.c avrpgm.c avrpgmif.c uart_tx.S
+DEPS=Makefile main.h cron.h uart.h lib.h avrpgm.h avrpgmif.h
 CC=avr-gcc
 OBJCOPY=avr-objcopy
 MMCU=atmega64c1

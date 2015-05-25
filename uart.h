@@ -7,5 +7,5 @@ void uart_init(void);
 void uart_wait_txdone(void);
 #define BAUD 115200
 
-//#define dprint(s) sendstr_P(PSTR(s "\r\n"))
-#define dprint(s)
+#define dprint(s) sendstr_P(PSTR(s))
+//#define dprint(s)

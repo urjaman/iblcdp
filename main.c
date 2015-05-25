@@ -42,9 +42,6 @@ void main(void) {
 	uart_init();
 	timer_init(); // must be after backlight init
 	sei();
-#ifdef ENABLE_UARTIF
-	sendstr_P((PGM_P)prompt); // initial prompt
-#endif
 	for(;;) {
 		mini_mainloop();
 	}

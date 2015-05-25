@@ -10,7 +10,7 @@
  * UART for RX and soft serial for TX. Funky. */
 
 typedef unsigned char urxbufoff_t;
-#define UART_BUFLEN 16
+#define UART_BUFLEN 256
 unsigned char volatile uart_rcvbuf[UART_BUFLEN];
 urxbufoff_t volatile uart_rcvwptr;
 urxbufoff_t volatile uart_rcvrptr;
@@ -21,7 +21,7 @@ ISR(LIN_TC_vect) {
 	urxbufoff_t reg = uart_rcvwptr;
 	uart_rcvbuf[reg] = d;
 	reg++;
-	if(reg==UART_BUFLEN) reg = 0;
+//	if(reg==UART_BUFLEN) reg = 0;
 	uart_rcvwptr = reg;
 }
 
@@ -36,11 +36,19 @@ uint8_t uart_recv(void) {
 	while (!uart_isdata()); // when there's nothing to do, one might idle...
 	reg = uart_rcvrptr;
 	val = uart_rcvbuf[reg++];
-	if(reg==UART_BUFLEN) reg = 0;
+//	if(reg==UART_BUFLEN) reg = 0;
 	uart_rcvrptr = reg;
 	return val;
 }
 
+/* 2Mbaud or 115200... */
+#if 0
+#define BTR 14
+#define BRR 9
+#else
+#define BTR 8
+#define BRR 0
+#endif
 
 void uart_init(void) {
 	cli();
@@ -49,7 +57,7 @@ void uart_init(void) {
 	DDRD |= _BV(2);
 	uart_rcvwptr = 0;
 	uart_rcvrptr = 0;
-	LINBTR = _BV(LDISR) | 14;
+	LINBTR = _BV(LDISR) | BTR;
 	LINCR = _BV(LENA) | _BV(LCMD2) | _BV(LCMD1);
 	LINSIR = _BV(LERR) | _BV(LIDOK) | _BV(LTXOK) | _BV(LRXOK);
 	LINENIR = _BV(LENRXOK);
@@ -57,8 +65,8 @@ void uart_init(void) {
 	 * the LIN can do better. */
 	/* We have pretty good 115200 @ 16Mhz here. */
 	/* 16Mhz / ( 14 * (9+1)) */
-	LINBTR = _BV(LDISR) | 14;
-	LINBRR = 9;
+	LINBTR = _BV(LDISR) | BTR;
+	LINBRR = BRR;
 	sei();
 }
 

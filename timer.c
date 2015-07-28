@@ -4,7 +4,7 @@
 #include "uart.h"
 
 /* This part is the non-calendar/date/time-related part. Just uptimer, etc. */
-uint8_t timer_waiting=0;
+volatile uint8_t timer_waiting=0;
 static uint8_t timer_1hzp=0; // 1 HZ Pulse, 0/1
 static uint8_t timer_5hzp=0; // 5 HZ Pulse
 static uint32_t secondstimer=0;
@@ -42,6 +42,8 @@ void timer_delay_ms(uint8_t ms) {
 }
 
 void timer_set_waiting(void) {
+	/* This can be called from ISR to have the main loop spin
+	 * essentially as a second half. */
 	timer_waiting=1;
 }
 

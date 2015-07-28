@@ -5,10 +5,11 @@
 #include "appdb.h"
 #include "timer.h"
 #include "avrpgm.h"
+#include "commands.h"
 
 #ifdef ENABLE_UARTIF
 
-static void sendcrlf(void) {
+void sendcrlf(void) {
 	sendstr_P(PSTR("\r\n"));
 }
 
@@ -55,12 +56,6 @@ void luint2outdual(uint32_t val) {
 	luint2xstr(buf,val);
 	sendstr(buf);
 	sendstr_P(PSTR("h) "));
-}
-
-void avrp_cmd(void) {
-	uint8_t d = avrp_test();
-	sendcrlf();
-	luint2outdual(d);
 }
 
 unsigned long int closureparser(unsigned char firsttok, unsigned char*ptr) {

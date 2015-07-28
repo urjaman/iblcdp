@@ -1,5 +1,9 @@
 /* UART MODULE HEADER */
 
+#ifdef M1284
+#include "sluart.h"
+#else
+
 uint8_t uart_isdata(void);
 uint8_t uart_recv(void);
 void uart_send(uint8_t val);
@@ -9,3 +13,5 @@ void uart_wait_txdone(void);
 
 #define dprint(s) sendstr_P(PSTR(s))
 //#define dprint(s)
+
+#endif

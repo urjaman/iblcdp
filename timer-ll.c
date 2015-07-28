@@ -76,6 +76,12 @@ uint24_t timer_get_linear_ss_time(void) {
 	return (uint24_t)todo*SSTC + sstimer;
 }
 
+#ifdef M64C1
+#define LIMIT 3036
+#else
+#define LIMIT 20864
+#endif
+
 uint16_t timer_get_lin_ss_u16(void) {
 	/* This is the above, but inline optimized and for u16 return. */
 	uint8_t todo;
@@ -89,7 +95,7 @@ uint16_t timer_get_lin_ss_u16(void) {
 	: "=r" (sstimer)
 	: );
 	if (likely(!todo)) return sstimer;
-	if ((todo==1)&&(sstimer < 3036)) {
+	if ((todo==1)&&(sstimer < LIMIT)) {
 		return SSTC+sstimer;
 	} else {
 		return 0xFFFF;

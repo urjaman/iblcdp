@@ -4,12 +4,13 @@
 #include "console.h"
 #include "appdb.h"
 #include "lib.h"
+#include "slslave.h"
+#include "sluart.h"
 #include "timer.h"
-#include "slmaster.h"
 
 #ifdef ENABLE_UARTIF
 #define RECVBUFLEN 64
-const unsigned char prompt[] PROGMEM = "\x0D\x0AM64C1>";
+const unsigned char prompt[] PROGMEM = "\x0D\x0AM1284>";
 unsigned char recvbuf[RECVBUFLEN];
 unsigned char token_count;
 unsigned char* tokenptrs[MAXTOKENS];
@@ -29,28 +30,26 @@ static void uartif_run(void) {
 static void uartif_run(void) { }
 #endif
 
-
-/* Touch no UI from here. */
-/* Make additional mainloop hooks for running the not-caller UI if needed. */
-/* But for M64C1 the only UI is cli so we left that out from here. */
-void mini_mainloop(void) {
+void mini_mainloop_cli(void) {
 	timer_run();
-	slmaster_run();
+	slslave_run();
+}
+
+void mini_mainloop(void) {
+	mini_mainloop_cli();
+	uartif_run();
 }
 
 void main (void) __attribute__ ((noreturn));
 
 void main(void) {
 	cli();
-	PRR = _BV(PRCAN);
 	uart_init();
 	timer_init(); // must be after backlight init
-	slmaster_init();
+	slslave_init();
 	sei();
 	for(;;) {
 		mini_mainloop();
-		uartif_run();
 	}
 }
-
 

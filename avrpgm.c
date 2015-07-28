@@ -3,6 +3,7 @@
 #include "console.h"
 #include "lib.h"
 #include "avrpgm.h"
+#include "slmaster.h"
 
 #define AVR_TARGET_SIGNATURE 0x1E9706UL
 
@@ -12,6 +13,7 @@
 
 
 void avrp_init(void) {
+	slmaster_control(0);
 	DDRB |= _BV(7); // SCK
 	DDRB |= _BV(1); // MOSI
 	PORTD |= _BV(3); // Slave Select
@@ -90,11 +92,6 @@ uint8_t avrp_lvp_entry(void) {
 		avrp_spibyte(0x00);
 		if (echo == 0x53)
 			return 0;
-		if (retries) {
-			dprint("PGM ENTRY RETRY:");
-			dprint_hb(echo);
-			dprint("\r\n");
-		}
 	} while (retries--);
 	return 1;
 }
@@ -251,6 +248,7 @@ void avrp_run_avr(void) {
 	_delay_us(10);
 	reset(1);
 	_delay_us(100);
+	slmaster_control(1);
 }
 
 void avrp_halt_avr(void) {

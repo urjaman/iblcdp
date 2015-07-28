@@ -31,7 +31,9 @@ unsigned char getline_mc(unsigned char* buf, uint8_t len) {
 	for(;i<len;i++) {
 		if (uart_isdata()) {
 			v = RECEIVE();
+#ifdef M64C1
 			if (avrpgm_sercheck(v)) continue;
+#endif
 			if (((v == BS)||(v == DEL))&&(i)) { SEND(BS); SEND(SPACE); SEND(BS); i = i-2; continue; }; // Understand BS or DEL
 			if (v == CR) { SEND(CR); SEND(LF); buf[i] = 0; i=0; return 1; }; // Understand CR
 			if ((v < 32)||(v == DEL)) { i--; continue; }; // Filter ASCII control codes

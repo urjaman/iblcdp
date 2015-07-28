@@ -1,5 +1,10 @@
 /* GENERIC DEFINITIONS FOR PROJECT */
+#ifdef M64C1
 #define F_CPU 16000000
+#else
+#define F_CPU 11059200
+#endif
+
 #include <util/delay.h>
 #include <avr/io.h>
 #include <avr/interrupt.h>
@@ -13,6 +18,11 @@
 #include <stdlib.h>
 #include <alloca.h>
 void mini_mainloop(void);
+
+#ifdef M1284
+void mini_mainloop_cli(void);
+#endif
+
 #define MAXTOKENS 16
 extern unsigned char token_count;
 extern unsigned char* tokenptrs[];

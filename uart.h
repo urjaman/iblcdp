@@ -5,6 +5,7 @@
 #else
 
 uint8_t uart_isdata(void);
+int uart_recv_to(uint8_t to);
 uint8_t uart_recv(void);
 void uart_send(uint8_t val);
 void uart_init(void);

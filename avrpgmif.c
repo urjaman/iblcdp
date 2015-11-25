@@ -5,14 +5,6 @@
 #include "avrpgm.h"
 #include "avrpgmif.h"
 
-static int recv_to(uint8_t to) {
-	for (uint16_t s = 0;s < 8000; s++) {
-		if (uart_isdata()) return uart_recv();
-		timer_delay_ms(1);
-	}
-	return -1;
-}
-
 uint8_t avrpgm_sercheck(uint8_t byte) {
 	uint8_t buffer[AVR_PAGE_SIZE*2];
 	uint16_t cmd;
@@ -25,12 +17,12 @@ uint8_t avrpgm_sercheck(uint8_t byte) {
 	SEND(0x55);
 	SEND(AVR_PAGE_SIZE*2>255?0:AVR_PAGE_SIZE*2);
 	do {
-		cmd = recv_to(200);
-		cmd |= recv_to(200) << 8;
+		cmd = uart_recv_to(200);
+		cmd |= uart_recv_to(200) << 8;
 		if (cmd != 0xFFFF) {
 			uint8_t w = 1;
 			for (int n=0;n<AVR_PAGE_SIZE*2;n++) {
-				int b = recv_to(200);
+				int b = uart_recv_to(200);
 				if (b<0) {
 					w = 0;
 					break;

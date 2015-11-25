@@ -77,6 +77,6 @@ uint16_t cron_run_tasks(void) {
 	struct cron_task *nt = chead;
 	nt->taskf();
 	chead = nt->next;
-	list_add_task(nt);
+	if (!(nt->flags&CRON_FLAG_ONCE)) list_add_task(nt);
 	return chead->next_invoc;
 }

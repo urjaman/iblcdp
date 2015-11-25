@@ -1,8 +1,12 @@
+
+#define CRON_FLAG_ONCE 1
+
 struct cron_task {
 	struct cron_task *next;
 	void(*taskf)(void);
 	uint16_t ss_freq;
 	uint16_t next_invoc;
+	uint16_t flags;
 };
 /* These are the public functions for everybody. */
 void cron_add_task(struct cron_task *t);

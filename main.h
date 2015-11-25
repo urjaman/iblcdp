@@ -21,6 +21,8 @@ void mini_mainloop(void);
 
 #ifdef M1284
 void mini_mainloop_cli(void);
+#else
+#define mini_mainloop_cli mini_mainloop
 #endif
 
 #define MAXTOKENS 16

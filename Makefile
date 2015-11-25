@@ -10,12 +10,13 @@ PROJECT2=iblcdm1284
 SOURCES2=main2.c console.c lib.c appdb.c commands.c timer.c time.c cron.c slslave.c sluart.c
 DEPS2=Makefile main.h cron.h lib.h commands.h slslave.h sluart.h
 
-AVRBINDIR=~/avrtc-test/bin/
+#AVRBINDIR=~/avrtc-test/bin/
 
-SERIAL_DEV ?= /dev/ttyUSB0
+SERIAL_DEV ?= /dev/ttyUSB1
 
 #AVRDUDECMD=avrdude -p $(AVRDUDEMCU) -c ftdi-ib -P usb -B 1kHz
 AVRDUDECMD=$(AVRBINDIR)avrdude -c arduino -b 115200 -p m64c1 -P $(SERIAL_DEV)
+AVRDUDECMD2=$(AVRBINDIR)avrdude -p m1284 -c butterfly -b 2000000 -P $(SERIAL_DEV)
 
 DFLAGS=-DM64C1
 CFLAGS=-mmcu=$(MMCU) -Os -g -Wall -W -pipe -mcall-prologues -std=gnu99 -Wno-main $(DFLAGS)
@@ -23,7 +24,7 @@ CFLAGS=-mmcu=$(MMCU) -Os -g -Wall -W -pipe -mcall-prologues -std=gnu99 -Wno-main
 DFLAGS2=-DM1284
 CFLAGS2=-mmcu=atmega1284 -Os -g -Wall -W -pipe -mcall-prologues -std=gnu99 -Wno-main $(DFLAGS2)
 
-all: $(PROJECT).hex $(PROJECT2).hex size
+all: $(PROJECT).hex $(PROJECT2).bin size
 
 $(PROJECT).hex: $(PROJECT).out
 	$(AVRBINDIR)$(OBJCOPY) -j .text -j .data -O ihex $(PROJECT).out $(PROJECT).hex
@@ -36,6 +37,9 @@ timer-ll.o: timer-ll.c timer.c main.h
 
 $(PROJECT2).hex: $(PROJECT2).out
 	$(AVRBINDIR)$(OBJCOPY) -j .text -j .data -O ihex $(PROJECT2).out $(PROJECT2).hex
+
+$(PROJECT2).bin: $(PROJECT2).out
+	$(AVRBINDIR)$(OBJCOPY) -j .text -j .data -O binary $(PROJECT2).out $(PROJECT2).bin
 
 $(PROJECT2).out: $(SOURCES2) timer-ll2.o
 	$(AVRBINDIR)$(CC) $(CFLAGS2) -flto -fwhole-program -flto-partition=none -mrelax -I./ -o $(PROJECT2).out  $(SOURCES2) timer-ll2.o -lc -lm
@@ -58,14 +62,21 @@ objdump2: $(PROJECT2).out
 program: $(PROJECT).hex
 	$(AVRDUDECMD) -U flash:w:$(PROJECT).hex
 
-size: $(PROJECT).out
+program2: $(PROJECT2).bin serialprogrammer
+	./serialprogrammer $(PROJECT2).bin $(SERIAL_DEV)
+
+size: $(PROJECT).out $(PROJECT2).out
 	$(AVRBINDIR)avr-size $(PROJECT).out
+	$(AVRBINDIR)avr-size $(PROJECT2).out
 
 clean:
 	-rm -f *.o
 	-rm -f $(PROJECT).out
 	-rm -f $(PROJECT).hex
 	-rm -f $(PROJECT).S
+
+serialprogrammer: serialprogrammer.c
+	gcc -W -Wall -Os -o serialprogrammer serialprogrammer.c
 
 backup:
 	$(AVRBINDIR)$(AVRDUDECMD) -U flash:r:backup.bin:r

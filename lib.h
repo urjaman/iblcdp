@@ -12,3 +12,5 @@ uint32_t astr2luint(unsigned char *buf);
 
 void dprint_hb(uint8_t b);
 void dprint_hl(uint32_t b);
+
+void luint2outdual(uint32_t val);

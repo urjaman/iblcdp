@@ -10,3 +10,4 @@ void echo_cmd(void);
 void help_cmd(void);
 void calc_cmd(void);
 void avrp_cmd(void);
+void sldbg_cmd(void);

@@ -8,6 +8,7 @@ const unsigned char echostr[] PROGMEM = "ECHO";
 const unsigned char calcstr[] PROGMEM = "CALC";
 #ifdef M64C1
 const unsigned char avrpstr[] PROGMEM = "AVRP";
+const unsigned char sldbgstr[] PROGMEM = "SLDBG";
 #endif
 const unsigned char helpstr[] PROGMEM = "?";
 
@@ -16,6 +17,7 @@ const struct command_t appdb[] PROGMEM = {
 	{(PGM_P)calcstr, &(calc_cmd)},
 #ifdef M64C1
 	{(PGM_P)avrpstr, &(avrp_cmd)},
+	{(PGM_P)sldbgstr, &(sldbg_cmd)},
 #endif
 	{(PGM_P)helpstr, &(help_cmd)},
 	{NULL,NULL}

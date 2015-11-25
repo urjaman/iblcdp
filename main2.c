@@ -33,6 +33,7 @@ static void uartif_run(void) { }
 void mini_mainloop_cli(void) {
 	timer_run();
 	slslave_run();
+	sluart_run();
 }
 
 void mini_mainloop(void) {

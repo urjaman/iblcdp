@@ -7,6 +7,8 @@
 #include "slslave.h"
 #include "sluart.h"
 #include "timer.h"
+#include "rgbbl.h"
+#include "stlcdnr.h"
 
 #ifdef ENABLE_UARTIF
 #define RECVBUFLEN 64
@@ -46,8 +48,10 @@ void main (void) __attribute__ ((noreturn));
 void main(void) {
 	cli();
 	uart_init();
-	timer_init(); // must be after backlight init
+	timer_init();
 	slslave_init();
+	rgbbl_init();
+	lcd_init();
 	sei();
 	for(;;) {
 		mini_mainloop();

@@ -7,8 +7,8 @@ OBJCOPY=avr-objcopy
 MMCU=atmega64c1
 
 PROJECT2=iblcdm1284
-SOURCES2=main2.c console.c lib.c appdb.c commands.c timer.c time.c cron.c slslave.c sluart.c
-DEPS2=Makefile main.h cron.h lib.h commands.h slslave.h sluart.h
+SOURCES2=main2.c console.c lib.c appdb.c commands.c timer.c time.c cron.c slslave.c sluart.c glcd.c stlcdnr.c rgbbl.c commands_m1284.c
+DEPS2=Makefile main.h cron.h lib.h commands.h slslave.h sluart.h stlcdnr.h stlcdhw.h rgbbl.h font-dyn-meta.c
 
 #AVRBINDIR=~/avrtc-test/bin/
 

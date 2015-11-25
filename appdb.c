@@ -9,6 +9,19 @@ const unsigned char calcstr[] PROGMEM = "CALC";
 #ifdef M64C1
 const unsigned char avrpstr[] PROGMEM = "AVRP";
 const unsigned char sldbgstr[] PROGMEM = "SLDBG";
+#else
+const unsigned char lcdistr[] PROGMEM = "LINIT";
+const unsigned char lcdcstr[] PROGMEM = "LCHAR";
+const unsigned char lcdc2str[] PROGMEM = "LUCHR";
+const unsigned char lcdclrstr[] PROGMEM = "LCLR";
+const unsigned char lcdbrstr[] PROGMEM = "LBRI";
+const unsigned char lcdwstr[] PROGMEM = "LW";
+const unsigned char ldwstr[]  PROGMEM = "LDW";
+const unsigned char lcdbgstr[] PROGMEM = "LBG";
+const unsigned char lbenchstr[] PROGMEM = "LBENCH";
+const unsigned char lgfxtstr[] PROGMEM = "LGFXT";
+const unsigned char blsetstr[] PROGMEM = "BLSET";
+const unsigned char faderstr[] PROGMEM = "FADE";
 #endif
 const unsigned char helpstr[] PROGMEM = "?";
 
@@ -18,6 +31,19 @@ const struct command_t appdb[] PROGMEM = {
 #ifdef M64C1
 	{(PGM_P)avrpstr, &(avrp_cmd)},
 	{(PGM_P)sldbgstr, &(sldbg_cmd)},
+#else
+	{(PGM_P)lcdistr, &(lcdr_cmd)},
+	{(PGM_P)lcdclrstr, &(lcdclr_cmd)},
+	{(PGM_P)lcdcstr, &(lcdc_cmd)},
+	{(PGM_P)lcdc2str, &(lcdc2_cmd)},
+	{(PGM_P)lcdbrstr, &(lcdbr_cmd)},
+	{(PGM_P)lcdwstr, &(lcdw_cmd)},
+	{(PGM_P)ldwstr, &(ldw_cmd)},
+	{(PGM_P)lcdbgstr, &(lcdbg_cmd)},
+	{(PGM_P)lbenchstr, &(lbench_cmd)},
+	{(PGM_P)lgfxtstr, &(lgfxt_cmd)},
+	{(PGM_P)blsetstr, &(blset_cmd)},
+	{(PGM_P)faderstr, &(fader_cmd)},
 #endif
 	{(PGM_P)helpstr, &(help_cmd)},
 	{NULL,NULL}

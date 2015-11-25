@@ -166,8 +166,8 @@ void dev_write(int fd, const void*buf, int count) {
 
 
 void dev_reset(int devfd) {
-	uint16_t c = EXIT_CMD;
-	dev_write(devfd,&c,2); /* dev reset, bb */
+	const uint8_t exit_seq[] = { 0xFF, 0xFF, 8 };
+	dev_write(devfd,exit_seq,sizeof(exit_seq)); /* dev reset, bb */
 }
 
 int main(int argc, char * argv[]) {
@@ -182,6 +182,9 @@ int main(int argc, char * argv[]) {
 	printf("Connected.\n");
 	set_baudrate(devfd,2000000);
 	sleep(2);
+	const uint8_t init_seq1[] = { 'Q' };
+	dev_write(devfd,init_seq1,sizeof(init_seq1));
+	sleep(1);
 	tcflush(devfd,TCIFLUSH);
 	flashfd = open(argv[argvbase],O_RDWR);
 	if (flashfd == -1) {
@@ -195,9 +198,9 @@ int main(int argc, char * argv[]) {
 		exit(4);
 	}
 	close(flashfd);
-	c = INIT_CMD;
 	printf("Initializing.\n");
-	dev_write(devfd,&c,1);
+	const uint8_t init_seq2[] = { INIT_CMD };
+	dev_write(devfd,init_seq2,sizeof(init_seq2));
 	dev_read(devfd,&c,1);
 	if (c != TAG_CHAR) {
 		printf("Read invalid - 0x%02X\n",(int)c);

@@ -9,6 +9,11 @@
 #include "timer.h"
 #include "rgbbl.h"
 #include "stlcdnr.h"
+#include "adc.h"
+#include "relay.h"
+#include "backlight.h"
+#include "buttons.h"
+
 
 #ifdef ENABLE_UARTIF
 #define RECVBUFLEN 64
@@ -34,8 +39,11 @@ static void uartif_run(void) { }
 
 void mini_mainloop_cli(void) {
 	timer_run();
+	adc_run();
 	slslave_run();
 	sluart_run();
+	backlight_run();
+	relay_run();
 }
 
 void mini_mainloop(void) {
@@ -51,7 +59,11 @@ void main(void) {
 	timer_init();
 	slslave_init();
 	rgbbl_init();
+	backlight_init();
+	adc_init();
 	lcd_init();
+	buttons_init();
+	relay_init();
 	sei();
 	for(;;) {
 		mini_mainloop();

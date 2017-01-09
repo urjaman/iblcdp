@@ -1,18 +1,22 @@
 # AVR-GCC Makefile
+
+COMMON_SOURCES=console.c lib.c appdb.c commands.c timer.c time.c cron.c
+COMMON_DEPS=main.h cron.h lib.h commands.h
+
 PROJECT=iblcdm64c1
-SOURCES=main.c uart.c console.c lib.c appdb.c commands.c commands_m64c1.c timer.c time.c cron.c avrpgm.c avrpgmif.c uart_tx.S slmaster.c
-DEPS=Makefile main.h cron.h uart.h lib.h avrpgm.h avrpgmif.h commands.h slmaster.h
+SOURCES=$(COMMON_SOURCES) main.c uart.c commands_m64c1.c avrpgm.c avrpgmif.c uart_tx.S slmaster.c
+DEPS=$(COMMON_DEPS) Makefile uart.h avrpgm.h avrpgmif.h slmaster.h
 CC=avr-gcc
 OBJCOPY=avr-objcopy
 MMCU=atmega64c1
 
 PROJECT2=iblcdm1284
-SOURCES2=main2.c console.c lib.c appdb.c commands.c timer.c time.c cron.c slslave.c sluart.c glcd.c stlcdnr.c rgbbl.c commands_m1284.c
-DEPS2=Makefile main.h cron.h lib.h commands.h slslave.h sluart.h stlcdnr.h stlcdhw.h rgbbl.h font-dyn-meta.c
+SOURCES2=$(COMMON_SOURCES) main2.c slslave.c sluart.c glcd.c stlcdnr.c rgbbl.c commands_m1284.c relay.c adc.c backlight.c buttons.c
+DEPS2=$(COMMON_DEPS) Makefile slslave.h sluart.h stlcdnr.h stlcdhw.h rgbbl.h font-dyn-meta.c relay.h adc.h backlight.h buttons.h
 
 #AVRBINDIR=~/avrtc-test/bin/
 
-SERIAL_DEV ?= /dev/ttyUSB1
+SERIAL_DEV ?= /dev/ttyUSB3
 
 #AVRDUDECMD=avrdude -p $(AVRDUDEMCU) -c ftdi-ib -P usb -B 1kHz
 AVRDUDECMD=$(AVRBINDIR)avrdude -c arduino -b 115200 -p m64c1 -P $(SERIAL_DEV)
@@ -41,12 +45,13 @@ $(PROJECT2).hex: $(PROJECT2).out
 $(PROJECT2).bin: $(PROJECT2).out
 	$(AVRBINDIR)$(OBJCOPY) -j .text -j .data -O binary $(PROJECT2).out $(PROJECT2).bin
 
-$(PROJECT2).out: $(SOURCES2) timer-ll2.o
-	$(AVRBINDIR)$(CC) $(CFLAGS2) -flto -fwhole-program -flto-partition=none -mrelax -I./ -o $(PROJECT2).out  $(SOURCES2) timer-ll2.o -lc -lm
+$(PROJECT2).out: $(SOURCES2) timer-ll2.o adc-ll.o
+	$(AVRBINDIR)$(CC) $(CFLAGS2) -flto -fwhole-program -flto-partition=none -mrelax -I./ -o $(PROJECT2).out  $(SOURCES2) timer-ll2.o adc-ll.o -lc -lm
 
 timer-ll2.o: timer-ll.c timer.c main.h
 	$(AVRBINDIR)$(CC) $(CFLAGS2) -I. -c -o timer-ll2.o timer-ll.c
-
+adc-ll.o: adc-ll.c adc.c main.h
+	$(AVRBINDIR)$(CC) $(CFLAGS2) -I./ -c -o adc-ll.o adc-ll.c
 
 
 asm: $(SOURCES)

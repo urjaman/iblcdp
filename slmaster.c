@@ -38,8 +38,8 @@ void slmaster_init(void) {
 	DDRB |= _BV(1); // MOSI
 	PORTD |= _BV(3); // Slave Select
 	DDRD |= _BV(3);
-	SPCR = _BV(SPE) | _BV(MSTR) | _BV(SPR0);
-	SPSR = _BV(SPI2X);
+	SPCR = _BV(SPE) | _BV(MSTR) | _BV(SPR0) | _BV(SPR1);
+//	SPSR = _BV(SPI2X);
 	SPSR = 0;
 	sl_txwo = 0;
 	sl_txro = 0;
@@ -105,7 +105,7 @@ void slmaster_run(void) {
 			if (tmp>=RX_BUFLEN) tmp = 0;
 			sl_rxwo = tmp;
 			}
-			_delay_us(10); /* Because our SPIs are so unbuffered, need to give slave time to run ISR. */
+			_delay_us(100); /* Because our SPIs are so unbuffered, need to give slave time to run ISR. */
 			slmaster_tx_one();
 		}
 		return;
@@ -117,7 +117,9 @@ void slmaster_run(void) {
 		PORTD &= ~_BV(3);
 		_delay_us(1);
 		sl_active = 32;
+		_delay_us(100); /* Because our SPIs are so unbuffered, need to give slave time to run ISR. */
 		slmaster_tx_one();
+		_delay_us(100); /* Because our SPIs are so unbuffered, need to give slave time to run ISR. */
 	}
 }
 

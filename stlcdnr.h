@@ -20,11 +20,11 @@ void lcd_clear(void);
 void lcd_gotoxy(uint8_t x, uint8_t y);
 
 // This is in the native format, x= pixels, y=blocks
-void lcd_gotoxy_nt(uint8_t x, uint8_t y);
+void lcd_gotoxy_dw(uint8_t x, uint8_t y);
 
 
-uint8_t lcd_puts_dyn(const unsigned char *str);
-uint8_t lcd_puts_dyn_P(PGM_P str);
+uint8_t lcd_puts_dw(const unsigned char *str);
+uint8_t lcd_puts_dw_P(PGM_P str);
 
 // These are for the dynamic extension of the font, obviously
 uint8_t lcd_strwidth(const unsigned char *str);
@@ -37,4 +37,18 @@ void lcd_write_block(const uint8_t* buffer, uint8_t w, uint8_t h);
 
 void st7565_set_contrast(uint8_t val);
 
+/* big is always dw, for now */
+void lcd_puts_big(const unsigned char * str);
+void lcd_puts_big_P(PGM_P str);
+
+uint8_t lcd_strwidth_big(const unsigned char*str);
+uint8_t lcd_strwidth_big_P(PGM_P str);
+
+/* Dynwidth "gfx" functions. */
+void lcd_clear_dw(uint8_t w);
+void lcd_write_dwb(uint8_t *buf, uint8_t w);
+void lcd_clear_eol(void);
+
+
 /* End header */
+

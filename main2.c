@@ -8,12 +8,12 @@
 #include "sluart.h"
 #include "timer.h"
 #include "rgbbl.h"
-#include "stlcdnr.h"
+#include "lcd.h"
 #include "adc.h"
 #include "relay.h"
 #include "backlight.h"
 #include "buttons.h"
-
+#include "tui.h"
 
 #ifdef ENABLE_UARTIF
 #define RECVBUFLEN 64
@@ -44,6 +44,7 @@ void mini_mainloop_cli(void) {
 	sluart_run();
 	backlight_run();
 	relay_run();
+	buttons_get();
 }
 
 void mini_mainloop(void) {
@@ -64,9 +65,11 @@ void main(void) {
 	lcd_init();
 	buttons_init();
 	relay_init();
+	tui_init();
 	sei();
 	for(;;) {
 		mini_mainloop();
+		tui_run();
 	}
 }
 

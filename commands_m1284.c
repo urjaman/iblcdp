@@ -45,10 +45,10 @@ void ldw_cmd(void)
 	if (token_count >= 3) {
 		uint8_t y = astr2luint(tokenptrs[1]);
 		uint8_t x = astr2luint(tokenptrs[2]);
-		lcd_gotoxy_nt(x,y);
+		lcd_gotoxy_dw(x,y);
 		for (uint8_t i=3;i<token_count;i++) {
-		    lcd_puts_dyn(tokenptrs[i]);
-		    lcd_puts_dyn_P(PSTR(" "));
+		    lcd_puts_dw(tokenptrs[i]);
+		    lcd_puts_dw_P(PSTR(" "));
 		}
 	}
 }

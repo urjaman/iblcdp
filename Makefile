@@ -11,15 +11,15 @@ OBJCOPY=avr-objcopy
 MMCU=atmega64c1
 
 PROJECT2=iblcdm1284
-SOURCES2=$(COMMON_SOURCES) main2.c slslave.c sluart.c glcd.c stlcdnr.c rgbbl.c commands_m1284.c relay.c adc.c backlight.c buttons.c
-DEPS2=$(COMMON_DEPS) Makefile slslave.h sluart.h stlcdnr.h stlcdhw.h rgbbl.h font-dyn-meta.c relay.h adc.h backlight.h buttons.h
+SOURCES2=$(COMMON_SOURCES) main2.c slslave.c sluart.c glcd.c stlcdnr.c rgbbl.c commands_m1284.c relay.c adc.c backlight.c buttons.c tui-lib.c tui.c
+DEPS2=$(COMMON_DEPS) Makefile slslave.h sluart.h stlcdnr.h stlcdhw.h rgbbl.h font-dyn-meta.c relay.h adc.h backlight.h buttons.h tui-lib.h tui.h lcd.h
 
 #AVRBINDIR=~/avrtc-test/bin/
 
-SERIAL_DEV ?= /dev/ttyUSB3
+SERIAL_DEV ?= /dev/ttyUSB0
 
 #AVRDUDECMD=avrdude -p $(AVRDUDEMCU) -c ftdi-ib -P usb -B 1kHz
-AVRDUDECMD=$(AVRBINDIR)avrdude -c arduino -b 115200 -p m64c1 -P $(SERIAL_DEV)
+AVRDUDECMD=$(AVRBINDIR)avrdude -c arduino -b 115200 -p m64 -F -P $(SERIAL_DEV)
 AVRDUDECMD2=$(AVRBINDIR)avrdude -p m1284 -c butterfly -b 2000000 -P $(SERIAL_DEV)
 
 DFLAGS=-DM64C1
@@ -50,6 +50,7 @@ $(PROJECT2).out: $(SOURCES2) timer-ll2.o adc-ll.o
 
 timer-ll2.o: timer-ll.c timer.c main.h
 	$(AVRBINDIR)$(CC) $(CFLAGS2) -I. -c -o timer-ll2.o timer-ll.c
+
 adc-ll.o: adc-ll.c adc.c main.h
 	$(AVRBINDIR)$(CC) $(CFLAGS2) -I./ -c -o adc-ll.o adc-ll.c
 
@@ -75,13 +76,8 @@ size: $(PROJECT).out $(PROJECT2).out
 	$(AVRBINDIR)avr-size $(PROJECT2).out
 
 clean:
-	-rm -f *.o
-	-rm -f $(PROJECT).out
-	-rm -f $(PROJECT).hex
-	-rm -f $(PROJECT).S
+	-rm -f *.o $(PROJECT).hex $(PROJECT).out $(PROJECT2).bin $(PROJECT2).out
 
 serialprogrammer: serialprogrammer.c
 	gcc -W -Wall -Os -o serialprogrammer serialprogrammer.c
 
-backup:
-	$(AVRBINDIR)$(AVRDUDECMD) -U flash:r:backup.bin:r

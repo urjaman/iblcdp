@@ -7,7 +7,7 @@
 #define MAX_GREEN	200
 #define MAX_BLUE 	200
 
-static uint8_t rgbbl_color = C_MAGENTA; /* lol */
+static uint8_t rgbbl_color = C_CYAN; /* lol */
 static uint8_t rgbbl_intensity = 255;
 
 void rgbbl_set(uint8_t r, uint8_t g, uint8_t b)

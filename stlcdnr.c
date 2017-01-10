@@ -99,7 +99,7 @@ void lcd_init(void)
     SENDSTR("LCD_INIT DONE\r\n");
 }
 
-void lcd_gotoxy_nt(uint8_t x, uint8_t y)
+void lcd_gotoxy_dw(uint8_t x, uint8_t y)
 {
     if (x >= LCDWIDTH) x=LCDWIDTH-1;
     if (y >= LCD_MAXY) y=LCD_MAXY-1;
@@ -109,7 +109,7 @@ void lcd_gotoxy_nt(uint8_t x, uint8_t y)
 
 void lcd_gotoxy(uint8_t x, uint8_t y)
 {
-    lcd_gotoxy_nt(LCD_CHARW*x,y);
+    lcd_gotoxy_dw(LCD_CHARW*x,y);
 }
 
 
@@ -307,6 +307,15 @@ void lcd_write_block(const uint8_t *buffer, uint8_t w, uint8_t h)
 	if (lcd_char_x > (LCD_MAXX*LCD_CHARW)) lcd_char_x = (LCD_MAXX*LCD_CHARW); /* saturate */
 }
 
+void lcd_clear_block(uint8_t x, uint8_t y, uint8_t w, uint8_t h)
+{
+	for (uint8_t yi=y;yi<(y+h);yi++) {
+		st7565_gotoxy(x, yi);
+		for (uint8_t n=0;n<w;n++) st7565_data(0);
+	}
+}
+
+
 // mfont8x8.c is generated with https://github.com/urjaman/st7565-fontgen
 #include "mfont8x8.c"
 
@@ -328,39 +337,12 @@ static void lcd_putchar_(unsigned char c, uint8_t dw)
     lcd_write_block_P(block,w,1);
 }
 
-uint8_t lcd_strwidth(const unsigned char *str)
-{
-    uint8_t r=0;
-    uint8_t c;
-    while ((c = *str++)) {
-        if (c < 0x20) c = 0x20;
-        uint8_t meta_b = pgm_read_byte(&(font_metadata[c-0x20]));
-        r += DW(meta_b);
-    }
-    return r;
-}
-
-uint8_t lcd_strwidth_P(PGM_P str)
-{ /* This is a convenience function, if you dont expect much change in the strings, i'd suggest you to
-     run once with this and dprint the constant and put that in your math instead --- atleast until gcc
-     is smart enough to do this for you. */
-    uint8_t r=0;
-    uint8_t c;
-    while ((c = pgm_read_byte(str++))) {
-        if (c < 0x20) c = 0x20;
-        uint8_t meta_b = pgm_read_byte(&(font_metadata[c-0x20]));
-        r += DW(meta_b);
-    }
-    return r;
-}
-
-
 void lcd_putchar(unsigned char c)
 {
     lcd_putchar_(c,0);
 }
 
-void lcd_putchar_dyn(unsigned char c)
+void lcd_putchar_dw(unsigned char c)
 {
     lcd_putchar_(c,1);
 }
@@ -390,7 +372,7 @@ void lcd_puts(const unsigned char * str)
     lcd_puts_(str,0);
 }
 
-uint8_t lcd_puts_dyn(const unsigned char *str)
+uint8_t lcd_puts_dw(const unsigned char *str)
 {
     uint8_t xb = lcd_char_x;
     lcd_puts_(str,1);
@@ -402,9 +384,117 @@ void lcd_puts_P(PGM_P str)
     lcd_puts_P_(str,0);
 }
 
-uint8_t lcd_puts_dyn_P(PGM_P str)
+uint8_t lcd_puts_dw_P(PGM_P str)
 {
     uint8_t xb = lcd_char_x;
     lcd_puts_P_(str,1);
     return lcd_char_x - xb;
 }
+
+void lcd_clear_dw(uint8_t w) {
+	if ((lcd_char_x+w)>LCDWIDTH) {
+		w = LCDWIDTH - lcd_char_x;
+	}
+	lcd_clear_block(lcd_char_x, lcd_char_y, w, 1);
+	lcd_char_x += w;
+}
+
+void lcd_clear_eol(void) {
+	lcd_clear_dw(LCDWIDTH - lcd_char_x);
+	lcd_char_x = 0;
+	lcd_char_y++;
+}
+
+void lcd_write_dwb(uint8_t *buf, uint8_t w) {
+        lcd_write_block(buf, w, 1);
+}
+
+static void lcd_putchar_big(unsigned char c)
+{
+	uint8_t buf[32];
+
+	PGM_P block;
+	if (c < 0x20) c = 0x20;
+	block = (const char*)&(st7565_font[c-0x20][0]);
+        uint8_t font_meta_b = pgm_read_byte(&(font_metadata[c-0x20]));
+	uint8_t w = DW(font_meta_b);
+        block += XOFF(font_meta_b);
+	if ((lcd_char_x+(w*2))>LCDWIDTH) {
+		w = (LCDWIDTH - lcd_char_x)/2;
+	}
+        for (int i=0;i<w;i++) {
+        	uint8_t d = pgm_read_byte(block);
+        	block++;
+        	uint8_t hi = 0;
+        	uint8_t lo = 0;
+        	for (int i=0;i<4;i++) {
+        		hi = hi >> 2;
+        		lo = lo >> 2;
+        		if (d & _BV(4+i)) hi |= 0xC0;
+        		if (d & _BV(i)) lo |= 0xC0;
+        	}
+        	buf[i*2] = hi;
+        	buf[i*2+1] = hi;
+        	buf[(w+i)*2] = lo;
+        	buf[(w+i)*2+1] = lo;
+        }
+
+        lcd_write_block(buf,w*2,2);
+}
+
+static uint8_t lcd_dw_charw(uint8_t c)
+{
+	if (c < 0x20) c = 0x20;
+        uint8_t font_meta_b = pgm_read_byte(&(font_metadata[c-0x20]));
+	return DW(font_meta_b);
+}
+
+
+uint8_t lcd_strwidth(const unsigned char * str) {
+	uint8_t w = 0;
+	do {
+		if (*str) w += lcd_dw_charw(*str);
+		else return w;
+		str++;
+	} while(1);
+}
+
+uint8_t lcd_strwidth_P(PGM_P str) {
+	uint8_t w = 0;
+	do {
+		uint8_t c = pgm_read_byte(str);
+		if (c) w += lcd_dw_charw(c);
+		else return w;
+		str++;
+	} while(1);
+}
+
+/* big = 2x small, but dont tell the user ;) */
+uint8_t lcd_strwidth_big(const unsigned char * str) {
+	return lcd_strwidth(str)*2;
+}
+
+uint8_t lcd_strwidth_big_P(PGM_P str) {
+	return lcd_strwidth_P(str)*2;
+}
+
+
+
+void lcd_puts_big_P(PGM_P str) {
+	unsigned char c;
+start:
+	c = pgm_read_byte(str);
+	if (c) lcd_putchar_big(c);
+	else return;
+	str++;
+	goto start;
+}
+
+void lcd_puts_big(const unsigned char * str) {
+start:
+	if (*str) lcd_putchar_big(*str);
+	else return;
+	str++;
+	goto start;
+}
+

@@ -5,9 +5,6 @@
 #include "slslave.h"
 #include "sluart.h"
 
-#define CHANLEN(c,l) (((c)<<4)|(l))
-#define CHAN(x) ((x)>>4)
-#define LEN(x) ((x) & 0xF)
 
 #define TX_BUFLEN 128
 #define RX_BUFLEN 128

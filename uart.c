@@ -9,8 +9,8 @@
 /* This is an UART module using the ATmega64C1 LIN
  * UART for RX and soft serial for TX (uart_tx.S). Funky. */
 
-typedef unsigned int urxbufoff_t;
-#define UART_BUFLEN 512
+typedef uint8_t  urxbufoff_t;
+#define UART_BUFLEN 256
 static unsigned char volatile uart_rcvbuf[UART_BUFLEN];
 urxbufoff_t volatile uart_rcvwptr;
 static urxbufoff_t volatile uart_rcvrptr;

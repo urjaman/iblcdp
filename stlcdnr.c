@@ -79,7 +79,7 @@ static void st7565_gotoxy(uint8_t x, uint8_t y);
 
 /* Init Debug is optional. */
 #ifndef SENDSTR
-#define SENDSTR
+#define SENDSTR(x)
 #endif
 
 #define nop asm volatile ("nop\n\t")

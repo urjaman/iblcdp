@@ -56,6 +56,7 @@ void main (void) __attribute__ ((noreturn));
 
 void main(void) {
 	cli();
+	clock_prescale_set(clock_div_1);
 	uart_init();
 	timer_init();
 	slslave_init();

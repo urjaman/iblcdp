@@ -41,13 +41,14 @@ static void backlight_fader(void) {
 			v2 = pgm_read_byte(&(backlight_values[bl_v_now-1]));
 			v1 = ((v1-v2)/2)+v2;
 			rgbbl_set_intensity(v1);
-			_delay_ms(25);
+			timer_delay_ms(25);
 			backlight_simple_set(bl_v_now-1);
-			_delay_ms(25);
+			timer_delay_ms(25);
 		} else {
 			backlight_simple_set(bl_v_now-1);
-			_delay_ms(50);
+			timer_delay_ms(50);
 		}
+		if (bl_v_fadeto != bl_v_now) timer_set_waiting();
 		return;
 	}
 	if (bl_v_fadeto > bl_v_now) {

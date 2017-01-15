@@ -1,4 +1,5 @@
 #include "main.h"
+#include "timer.h"
 #include "backlight.h"
 #include "buttons.h"
 
@@ -18,10 +19,10 @@ uint8_t buttons_get(void) {
 	uint8_t v = buttons_get_v();
 	if (!v) return 0;
 	backlight_activate();
-	_delay_ms(120);
+	timer_delay_ms(120);
 	for(;;) {
 		uint8_t sv;
-		_delay_ms(30);
+		timer_delay_ms(30);
 		sv = buttons_get_v();
 		if (sv == v){
 			return v;

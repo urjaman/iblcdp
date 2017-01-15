@@ -214,10 +214,15 @@ int main(int argc, char * argv[]) {
 	printf("Entered programming mode.\nPagesize = %d. We have %d pages to write.\n",pagesz,datasz/pagesz);
 
 	for (i=0;i<datasz;i+=pagesz) {
+		int tries = 3;
 		uint16_t p = i/pagesz;
-		dev_write(devfd,&p,2);
-		dev_write(devfd,&(buffer[i]),pagesz);
-		dev_read(devfd,&c,1);
+		do {
+			dev_write(devfd,&p,2);
+			dev_write(devfd,&(buffer[i]),pagesz);
+			dev_read(devfd,&c,1);
+			if (c==TAG_CHAR) break;
+			if (c!='E') break;
+		} while (--tries);
 		if (c != TAG_CHAR) {
 			printf("Page ack invalid - 0x%02X (%c) p=%d\n",(int)c, isprint(c)?c:'.',p);
 			dev_reset(devfd);

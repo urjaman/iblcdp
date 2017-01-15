@@ -43,8 +43,6 @@ static void uart_waiting(void) {
 }
 
 int uart_recv_to(uint8_t to) {
-	urxbufoff_t reg;
-	unsigned char val;
 	if (!uart_isdata()) {
 		uint24_t st = timer_get_linear_ss_time() + (to*10000UL)/US_PER_SSUNIT + 1;
 		do {
@@ -52,10 +50,9 @@ int uart_recv_to(uint8_t to) {
 			if (to) if (timer_get_linear_ss_time() > st) return -1;
 		} while (!uart_isdata());
 	}
-	reg = uart_rcvrptr;
-	val = uart_rcvbuf[reg++];
-	if(reg==UART_BUFLEN) reg = 0;
-	uart_rcvrptr = reg;
+	urxbufoff_t reg = uart_rcvrptr;
+	uint8_t val = uart_rcvbuf[reg++];
+	uart_rcvrptr = reg & (UART_BUFLEN-1);
 	return val;
 }
 

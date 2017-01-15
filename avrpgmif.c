@@ -31,7 +31,7 @@ uint8_t avrpgm_sercheck(uint8_t byte) {
 			}
 			if (!w) {
 				SEND('E');
-				return 1;
+				continue;
 			}
 			if (cmd==0) {
 				avrp_chip_erase();

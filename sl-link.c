@@ -2,6 +2,40 @@
 #include "sl-link.h"
 #include <util/crc16.h>
 
+static void (*sl_handlers[SL_MAX_CH])(uint8_t, uint8_t, uint8_t*) = { };
+
+int sl_reg_ch_handler(uint8_t ch, void(*cb)(uint8_t, uint8_t, uint8_t*) ) {
+	if (ch >= SL_MAX_CH) {
+		return -2; // out of space, in other way...
+	}
+	if (sl_handlers[ch]) {
+		return -1; // we're stuffed, sorry
+	}
+	sl_handlers[ch] = cb;
+	return 0; // a-ok ;)
+}
+
+int sl_unreg_ch_handler(uint8_t ch) {
+	if (ch >= SL_MAX_CH) {
+		return -1; // this not a channel
+	}
+	sl_handlers[ch] = 0;
+	return 0; // done anyways
+}
+
+static void sl_dispatch_rx(uint8_t ch, uint8_t l, uint8_t* buf)
+{
+	if (ch >= SL_MAX_CH) {
+		// unimplemented ch, ignored
+		return;
+	}
+	if (!sl_handlers[ch]) {
+		// unhandled ch, ignore
+		return;
+	}
+	sl_handlers[ch](ch, l, buf);
+}
+
 void sl_parse_rx(uint8_t din) {
 	static enum rxs {
 		S_FB1 = 0,

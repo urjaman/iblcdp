@@ -12,12 +12,17 @@ static urxbufoff_t uart_rcvrptr;
 static uint8_t uart_txbuf[15];
 static uint8_t uart_txc = 0;
 
-void sluart_putbyte(uint8_t d) {
+static void sluart_putbyte(uint8_t d) {
 	urxbufoff_t reg = uart_rcvwptr;
-	uart_rcvbuf[reg] = d;
-	reg++;
+	uart_rcvbuf[reg++] = d;
 	uart_rcvwptr = reg;
 }
+
+static void sluart_handler(uint8_t ch, uint8_t l, uint8_t *buf) {
+	if (ch!=0) return;
+	for (uint8_t n=0;n<l;n++) sluart_putbyte(buf[n]);
+}
+
 
 uint8_t uart_isdata(void) {
 	if (uart_rcvwptr != uart_rcvrptr) return 1;
@@ -53,6 +58,7 @@ void uart_init(void) {
 	uart_rcvwptr = 0;
 	uart_rcvrptr = 0;
 	uart_txc = 0;
+	sl_reg_ch_handler(0, sluart_handler);
 	sei();
 }
 

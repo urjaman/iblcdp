@@ -1,4 +1,3 @@
-void sluart_putbyte(uint8_t d);
 uint8_t uart_isdata(void);
 uint8_t uart_recv(void);
 void uart_send(uint8_t c);

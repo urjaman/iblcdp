@@ -15,15 +15,14 @@ void avrp_cmd(void) {
 }
 
 
-static uint8_t sldbg_active = 0;
-
-void sldbg_putchar(uint8_t c) {
-	if (sldbg_active) SEND(c);
+static void sldbg_handler(uint8_t ch, uint8_t l, uint8_t *buf) {
+	if (ch!=0) return;
+	for (uint8_t n=0;n<l;n++) SEND(buf[n]);
 }
 
 void sldbg_cmd(void) {
 	uint8_t c;
-	sldbg_active = 1;
+	sl_reg_ch_handler(0, sldbg_handler);
 	while (1) {
 		if (uart_isdata()) {
 			c = RECEIVE();
@@ -31,7 +30,6 @@ void sldbg_cmd(void) {
 			sl_add_tx(0,1,&c);
 		}
 		mini_mainloop();
-//		SEND('.');
 	}
-	sldbg_active = 0;
+	sl_unreg_ch_handler(0);
 }

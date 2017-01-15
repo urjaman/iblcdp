@@ -111,18 +111,6 @@ void slmaster_run(void) {
 	}
 }
 
-void sl_dispatch_rx(uint8_t ch, uint8_t l, uint8_t *buf) {
-	switch (ch) {
-		case 0: /* Debug Data Channel. */
-			for (uint8_t n=0;n<l;n++) sldbg_putchar(buf[n]);
-			break;
-		default: /* Unknown... */
-			SEND('#');
-			for (uint8_t n=0;n<l;n++) sldbg_putchar(buf[n]);
-			break;
-	}
-}
-
 void sl_put_txbyte(uint8_t d) {
 	uint8_t tmp = sl_txwo;
 	sl_txbuf[tmp++] = d;

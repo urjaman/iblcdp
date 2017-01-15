@@ -7,7 +7,7 @@
 #ifdef ENABLE_UARTMODULE
 
 /* This is an UART module using the ATmega64C1 LIN
- * UART for RX and soft serial for TX. Funky. */
+ * UART for RX and soft serial for TX (uart_tx.S). Funky. */
 
 typedef unsigned int urxbufoff_t;
 #define UART_BUFLEN 512
@@ -17,15 +17,11 @@ static urxbufoff_t volatile uart_rcvrptr;
 
 
 ISR(LIN_TC_vect) {
-	uint8_t d = LINDAT;
 	urxbufoff_t reg = uart_rcvwptr;
-	uart_rcvbuf[reg++] = d;
+	volatile uint8_t *t = uart_rcvbuf + reg++;
 	uart_rcvwptr = reg & (UART_BUFLEN-1);
+	*t = LINDAT;
 }
-
-
-/* This is 2s of our 16-bit timer. */
-#define UART_TIMEOUT (F_CPU/512)
 
 uint8_t uart_isdata(void) {
 //	cli();

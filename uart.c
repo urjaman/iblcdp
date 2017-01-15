@@ -51,10 +51,12 @@ static void uart_waiting(void) {
 int uart_recv_to(uint8_t to) {
 	urxbufoff_t reg;
 	unsigned char val;
-	TCNT1 = 0;
-	while (!uart_isdata()) {
-		uart_waiting();
-		if (to) if (TCNT1 > UART_TIMEOUT) return -1;
+	if (!uart_isdata()) {
+		uint24_t st = timer_get_linear_ss_time() + (to*10000UL)/US_PER_SSUNIT + 1;
+		do {
+			uart_waiting();
+			if (to) if (timer_get_linear_ss_time() > st) return -1;
+		} while (!uart_isdata());
 	}
 	reg = uart_rcvrptr;
 	val = uart_rcvbuf[reg++];
@@ -78,9 +80,6 @@ uint8_t uart_recv(void) {
 
 void uart_init(void) {
 	cli();
-	TCCR1A = 0;
-	TCCR1B = 5; // clkIO/1024
-
 	PORTD |= _BV(2);
 	PORTD |= _BV(4);
 	DDRD |= _BV(2);

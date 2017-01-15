@@ -1,7 +1,7 @@
 # AVR-GCC Makefile
 
-COMMON_SOURCES=console.c lib.c appdb.c commands.c timer.c time.c cron.c
-COMMON_DEPS=main.h cron.h lib.h commands.h
+COMMON_SOURCES=console.c lib.c appdb.c commands.c timer.c time.c cron.c sl-link.c
+COMMON_DEPS=main.h cron.h lib.h commands.h sl-link.h
 
 PROJECT=iblcdm64c1
 SOURCES=$(COMMON_SOURCES) main.c uart.c commands_m64c1.c avrpgm.c avrpgmif.c uart_tx.S slmaster.c
@@ -81,3 +81,5 @@ clean:
 serialprogrammer: serialprogrammer.c
 	gcc -W -Wall -Os -o serialprogrammer serialprogrammer.c
 
+picocom:
+	picocom -b 2000000 -f n -d 8 -p 1 -y n -e c $(SERIAL_DEV)

@@ -24,6 +24,7 @@ static uint8_t sl_rxbuf[RX_BUFLEN];
 static uint8_t volatile sl_rxwo;
 static uint8_t sl_rxro;
 
+static uint8_t sl_rxwcnt;
 
 
 void slslave_init(void) {
@@ -31,6 +32,7 @@ void slslave_init(void) {
 	sl_txro = 0;
 	sl_rxwo = 0;
 	sl_rxro = 0;
+	sl_rxwcnt = 0;
 	DDRB |= _BV(6); // MISO
 	SPSR = 0;
 	SPDR = 0;
@@ -40,10 +42,14 @@ void slslave_init(void) {
 ISR(SPI_STC_vect) {
 	uint8_t tmp = sl_rxwo;
 	volatile uint8_t *p = sl_rxbuf + tmp++;
-	sl_rxwo = tmp & (RX_BUFLEN-1);
 	uint8_t d = SPDR;
-	*p = d;
-	if (d) timer_set_waiting();
+	if ((d)||(sl_rxwcnt)) {
+		sl_rxwo = tmp & (RX_BUFLEN-1);
+		*p = d;
+		sl_rxwcnt--;
+		if (d) sl_rxwcnt = 16;
+		timer_set_waiting();
+	}
 	uint8_t w = 0;
 	tmp = sl_txro;
 	if (tmp != sl_txwo) {
@@ -52,7 +58,6 @@ ISR(SPI_STC_vect) {
 		w = *p;
 	}
 	SPDR = w;
-
 }
 
 void slslave_run(void) {

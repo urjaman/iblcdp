@@ -38,19 +38,20 @@ void slslave_init(void) {
 }
 
 ISR(SPI_STC_vect) {
-	uint8_t d = SPDR;
 	uint8_t tmp = sl_rxwo;
-	sl_rxbuf[tmp++] = d;
+	volatile uint8_t *p = sl_rxbuf + tmp++;
 	sl_rxwo = tmp & (RX_BUFLEN-1);
-
+	uint8_t d = SPDR;
+	*p = d;
+	if (d) timer_set_waiting();
+	uint8_t w = 0;
 	tmp = sl_txro;
 	if (tmp != sl_txwo) {
-		SPDR = sl_txbuf[tmp++];
+		p = sl_txbuf + tmp++;
 		sl_txro = tmp & (RX_BUFLEN-1);
-	} else {
-		SPDR = 0;
+		w = *p;
 	}
-	if (d) timer_set_waiting();
+	SPDR = w;
 
 }
 

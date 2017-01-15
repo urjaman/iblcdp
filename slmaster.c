@@ -32,11 +32,11 @@ ISR(TIMER1_OVF_vect) {
 	PORTD &= ~_BV(3);
 	uint8_t tmp = sl_txro;
 	if (tmp != sl_txwo) {
-		SPDR = sl_txbuf[tmp++];
-		tmp &= (TX_BUFLEN-1);
-		sl_txro = tmp;
+		volatile uint8_t *p = sl_txbuf + tmp++;
+		sl_txro = tmp & (TX_BUFLEN-1);
+		SPDR = *p;
 		sl_sync = 1;
-		TIMSK1 = 0;
+		TIMSK1 = 0; // we wait for the SPI ISR
 		return;
 	}
 	if ((sl_sync)&&(!sl_rxwcnt)) { // at a break in data, perform a high pulse on ~CS
@@ -44,8 +44,8 @@ ISR(TIMER1_OVF_vect) {
 		sl_sync = 0;
 		return;
 	}
-	SPDR = 0; // filler data, the link is always "active"
-	TIMSK1 = 0;
+	SPDR = 0; // filler data, so the link is always "active"
+	TIMSK1 = 0; // wait for SPI
 }
 
 ISR(SPI_STC_vect) {
@@ -53,16 +53,15 @@ ISR(SPI_STC_vect) {
 	if ((d)||(sl_rxwcnt)) {
 		uint8_t tmp = sl_rxwo;
 		sl_rxbuf[tmp++] = d;
-		tmp &= (RX_BUFLEN-1);
-		sl_rxwo = tmp;
+		sl_rxwo = tmp & (RX_BUFLEN-1);
+		sl_rxwcnt--;
 		if (d) sl_rxwcnt = 16;
-		else sl_rxwcnt--;
-		if (sl_rxwcnt==0) sl_sync=1;
+		sl_sync=1;
 		timer_set_waiting();
 		// the filler is 0s, and we dont write most of it, but we write the provenly
 		// non-zero header and a fixed max amount of data after it
 	}
-	TIMSK1 = _BV(TOV1);
+	TIMSK1 = _BV(TOV1); // allow the T1 again
 }
 
 void slmaster_init(void) {

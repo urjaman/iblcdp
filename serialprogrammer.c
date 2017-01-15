@@ -28,6 +28,7 @@
 #include <termios.h>
 #include <string.h>
 #include <inttypes.h>
+#include <ctype.h>
 
 struct baudentry {
 	int flag;
@@ -182,7 +183,7 @@ int main(int argc, char * argv[]) {
 	printf("Connected.\n");
 	set_baudrate(devfd,2000000);
 	sleep(2);
-	const uint8_t init_seq1[] = { 'Q' };
+	const uint8_t init_seq1[] = { 'Q', 8 };
 	dev_write(devfd,init_seq1,sizeof(init_seq1));
 	sleep(1);
 	tcflush(devfd,TCIFLUSH);
@@ -203,7 +204,7 @@ int main(int argc, char * argv[]) {
 	dev_write(devfd,init_seq2,sizeof(init_seq2));
 	dev_read(devfd,&c,1);
 	if (c != TAG_CHAR) {
-		printf("Read invalid - 0x%02X\n",(int)c);
+		printf("Tag read invalid - 0x%02X (%c)\n",(int)c, isprint(c)?c:'.');
 		exit(7);
 	}
 	dev_read(devfd,&c,1);
@@ -218,7 +219,7 @@ int main(int argc, char * argv[]) {
 		dev_write(devfd,&(buffer[i]),pagesz);
 		dev_read(devfd,&c,1);
 		if (c != TAG_CHAR) {
-			printf("Read invalid - 0x%02X\n",(int)c);
+			printf("Page ack invalid - 0x%02X (%c) p=%d\n",(int)c, isprint(c)?c:'.',p);
 			dev_reset(devfd);
 			exit(8);
 		}
@@ -227,6 +228,6 @@ int main(int argc, char * argv[]) {
 	}
 	dev_reset(devfd);
 	close(devfd);
-	printf("\nEverything is ok\n");
+	printf("\nDone\n");
 	return 0;
 }

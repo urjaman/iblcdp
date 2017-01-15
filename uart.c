@@ -19,10 +19,8 @@ static urxbufoff_t volatile uart_rcvrptr;
 ISR(LIN_TC_vect) {
 	uint8_t d = LINDAT;
 	urxbufoff_t reg = uart_rcvwptr;
-	uart_rcvbuf[reg] = d;
-	reg++;
-	if(reg==UART_BUFLEN) reg = 0;
-	uart_rcvwptr = reg;
+	uart_rcvbuf[reg++] = d;
+	uart_rcvwptr = reg & (UART_BUFLEN-1);
 }
 
 

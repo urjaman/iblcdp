@@ -27,6 +27,9 @@ static uint8_t sl_rxbuf[RX_BUFLEN];
 static volatile uint8_t sl_rxwo;
 static uint8_t sl_rxro;
 
+#define IDLE_RATE (F_CPU/500)-1
+#define DATA_RATE (F_CPU/4000)-1
+
 
 ISR(TIMER1_OVF_vect) {
 	PORTD &= ~_BV(3);
@@ -37,11 +40,13 @@ ISR(TIMER1_OVF_vect) {
 		SPDR = *p;
 		sl_sync = 1;
 		TIMSK1 = 0; // we wait for the SPI ISR
+		OCR1A = DATA_RATE;
 		return;
 	}
 	if ((sl_sync)&&(!sl_rxwcnt)) { // at a break in data, perform a high pulse on ~CS
 		PORTD |= _BV(3);
 		sl_sync = 0;
+		OCR1A = IDLE_RATE;
 		return;
 	}
 	SPDR = 0; // filler data, so the link is always "active"
@@ -58,6 +63,7 @@ ISR(SPI_STC_vect) {
 		if (d) sl_rxwcnt = 16;
 		sl_sync=1;
 		timer_set_waiting();
+		OCR1A = DATA_RATE;
 		// the filler is 0s, and we dont write most of it, but we write the provenly
 		// non-zero header and a fixed max amount of data after it
 	}
@@ -71,7 +77,7 @@ void slmaster_init(void) {
 	sl_rxro = 0;
 	// the startup sequence is to transfer some bytes, then sync even if there was no comms.
 	sl_sync = 1;
-	sl_rxwcnt = 50; // nominal 5ms and then sync
+	sl_rxwcnt = 25; // nominal 5ms and then sync
 
 	DDRB |= _BV(7); // SCK
 	DDRB |= _BV(1); // MOSI
@@ -82,7 +88,7 @@ void slmaster_init(void) {
 
 	TCCR1A = _BV(WGM11) | _BV(WGM10);
 	TCCR1B = _BV(WGM13) | _BV(WGM12);
-	OCR1A = (F_CPU/1000)-1;
+	OCR1A = IDLE_RATE;
 	TCNT1 = 0;
 	TCCR1B |=  _BV(CS10);
 	TIFR1 = _BV(TOV1);

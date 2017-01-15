@@ -138,7 +138,7 @@ static void st7565_init(void) {
   // LCD bias select
   st7565_command(CMD_SET_BIAS_7);
   // ADC select
-  st7565_command(CMD_SET_ADC_NORMAL);
+  st7565_command(CMD_SET_ADC_REVERSE);
   // SHL select
   st7565_command(CMD_SET_COM_NORMAL);
   // Initial display line
@@ -226,6 +226,45 @@ static void spiwrite(uint8_t c) {
   nop;
   SCLK_PORT |= _BV(SCLK);
 }
+
+static void spiwrite_data(uint8_t c) {
+  uint8_t p = SID_PORT & ~_BV(SCLK);
+  bst(c,0);
+  bld(p,SID);
+  SID_PORT = p;
+  bst(c,1);
+  SCLK_PORT |= _BV(SCLK);
+  bld(p,SID);
+  SID_PORT = p;
+  bst(c,2);
+  SCLK_PORT |= _BV(SCLK);
+  bld(p,SID);
+  SID_PORT = p;
+  bst(c,3);
+  SCLK_PORT |= _BV(SCLK);
+  bld(p,SID);
+  SID_PORT = p;
+  bst(c,4);
+  SCLK_PORT |= _BV(SCLK);
+  bld(p,SID);
+  SID_PORT = p;
+  bst(c,5);
+  SCLK_PORT |= _BV(SCLK);
+  bld(p,SID);
+  SID_PORT = p;
+  bst(c,6);
+  SCLK_PORT |= _BV(SCLK);
+  bld(p,SID);
+  SID_PORT = p;
+  bst(c,7);
+  SCLK_PORT |= _BV(SCLK);
+  bld(p,SID);
+  SID_PORT = p;
+  nop;
+  SCLK_PORT |= _BV(SCLK);
+}
+
+
 #endif
 
 
@@ -236,19 +275,19 @@ static void st7565_command(uint8_t c) {
 
 static void st7565_data(uint8_t c) {
   A0_PORT |= _BV(A0);
-  spiwrite(c);
+  spiwrite_data(c);
 }
 
 static void st7565_clear(void) {
   uint8_t p, c;
   for(p = 0; p < 8; p++) {
     st7565_command(CMD_SET_PAGE | p);
-    spiwrite(CMD_SET_COLUMN_LOWER | (0x0 & 0xf)); /* Already in command mode. */
+    spiwrite(CMD_SET_COLUMN_LOWER | (0x2 & 0xf)); /* Already in command mode. */
     spiwrite(CMD_SET_COLUMN_UPPER | ((0x0 >> 4) & 0xf));
     spiwrite(CMD_RMW);
     st7565_data(0xff);
     for(c = 0; c < 128; c++) {
-	spiwrite(0); // Already in data mode as above
+	spiwrite_data(0); // Already in data mode as above
     }
   }
 }
@@ -259,11 +298,12 @@ void st7565_set_contrast(uint8_t val)
     st7565_command(CMD_SET_VOLUME_SECOND | (val & 0x3f));
 }
 
-static const uint8_t PROGMEM pagemap[] = { 3, 2, 1, 0, 7, 6, 5, 4 };
+//static const uint8_t PROGMEM pagemap[] = { 3, 2, 1, 0, 7, 6, 5, 4 };
+static const uint8_t PROGMEM pagemap[] = { 4, 5, 6, 7, 0, 1, 2, 3 };
 
 static void st7565_gotoxy(uint8_t x, uint8_t y) /* This is the hardware gotoxy */
 {
-	uint8_t cs = 1+x;
+	uint8_t cs = 3+x;
 	st7565_command(CMD_SET_PAGE | pgm_read_byte(&(pagemap[y])) );
 	spiwrite(CMD_SET_COLUMN_LOWER | (cs & 0xf));
 	spiwrite(CMD_SET_COLUMN_UPPER | ((cs >> 4) & 0xf));

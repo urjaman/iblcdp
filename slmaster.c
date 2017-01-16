@@ -9,13 +9,6 @@
 #define TX_BUFLEN 64
 #define RX_BUFLEN 64
 
-/* Preliminary channel ideas:
- * 0 debug uart data channel (M1284 debug output, console commands M64C1->M1284)
- * 1 control message channel (debug uart on/off ... other similar stuff, eg. subchannels.)
- * 2 clock channel - calendar+valid_byte @ 1Hz M64C1 -> M1284. Calendar if user set time M1284 -> M64C1.
- * 3 ADC data channel, subchannels for all the ADC channels. @ 1Hz, both have ADC channels other doesnt have
- */
-
 static volatile uint8_t sl_sync;
 static uint8_t sl_rxwcnt;
 

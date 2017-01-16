@@ -45,3 +45,5 @@ typedef uint32_t uint24_t;
 
 #define likely(x)       __builtin_expect(!!(x), 1)
 #define unlikely(x)     __builtin_expect(!!(x), 0)
+
+#define PURE __attribute__((pure))

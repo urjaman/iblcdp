@@ -2,6 +2,7 @@
  #include "time.h"
  #include "lib.h"
  // lib.c
+static uint8_t is_leap(uint8_t y_in) PURE;
 static uint8_t is_leap(uint8_t y_in) {
 	uint16_t year = (uint16_t)y_in+TIME_EPOCH_YEAR;
 	if ((year%4)==0) {
@@ -19,11 +20,13 @@ static uint8_t is_leap(uint8_t y_in) {
 	}
 }
 
+static uint16_t year_days(uint8_t year) PURE;
 static uint16_t year_days(uint8_t year) {
 	if (is_leap(year)) return 366;
 	return 365;
 }
 
+uint8_t month_days(uint8_t year, uint8_t month) PURE;
 uint8_t month_days(uint8_t year, uint8_t month) {
 	switch (month) {
 		case 0: return 31;

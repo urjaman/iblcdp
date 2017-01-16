@@ -2,6 +2,7 @@
 #include "timer.h"
 #include "cron.h"
 #include "uart.h"
+#include "sl-link.h"
 
 /* This part is the non-calendar/date/time-related part. Just uptimer, etc. */
 volatile uint8_t timer_waiting=0;
@@ -100,6 +101,7 @@ uint8_t timer_get_5hz_cnt(void) {
 
 // Time ticking without RTC is considered valid for this time.
 //#define TIME_NONRTC_VALID_TIME (365*24*60*60)
+static void clk_ch_tx(void);
 
 uint32_t timer_time_last_valid_moment=0;
 uint8_t timer_time_valid=0;
@@ -110,6 +112,9 @@ void timer_set_time(struct mtm *tm) {
 	timer_time_valid = 1;
 	timer_time_last_valid_moment = secondstimer;
 //	rtc_write(tm); // If there is an RTC, set time into it.
+#ifdef M1284
+	clk_ch_tx();
+#endif
 }
 
 
@@ -150,6 +155,10 @@ static void timer_time_tick(void) {
 		tmp = 0;
 	}
 	timer_tm_now.sec = tmp;
+#ifdef M64C1
+	clk_ch_tx();
+#endif
+
 #if 0
 	// Time incremented. Check if it is valid and whether it should still be valid.
 	if (timer_time_valid) {
@@ -160,4 +169,45 @@ static void timer_time_tick(void) {
 		rtc_write(&timer_tm_now);
 	}
 #endif
+}
+
+
+static void clk_ch_tx(void)
+{
+	uint8_t buf[1+sizeof(struct mtm)];
+	struct mtm *tm = (struct mtm*)&(buf[1]);
+	buf[0] = timer_time_valid;
+	*tm = timer_tm_now;
+	sl_add_tx(SL_CH_CLK, sizeof(struct mtm)+1, buf);
+}
+
+#define ABSDIFF(a,b) (((a)>(b))?((a)-(b)):((b)-(a)))
+
+static void clk_ch_handler(uint8_t ch, uint8_t l, uint8_t *buf)
+{
+	if (ch!=SL_CH_CLK) return;
+	if (l < sizeof(struct mtm)+1) return; // undersized frame
+#ifdef M1284
+	if ((buf[0]==0)&&(timer_time_valid)) {
+		clk_ch_tx();
+		return;
+	}
+#else
+	if (buf[0]==0) return;
+#endif
+	struct mtm *tm = (struct mtm*)&(buf[1]);
+	if (!timer_time_valid) {
+		timer_tm_now = *tm;
+		timer_time_valid = 1;
+		return;
+	}
+	uint32_t diff = ABSDIFF(mtm2linear(tm),mtm2linear(&timer_tm_now));
+	if (diff>1) { // dont fuzzle with the time for max 1s difference
+		timer_tm_now = *tm;
+	}
+}
+
+void timer_init_hl(void)
+{
+	sl_reg_ch_handler(SL_CH_CLK, clk_ch_handler);
 }

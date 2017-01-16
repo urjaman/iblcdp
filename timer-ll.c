@@ -56,6 +56,7 @@ void timer_init(void) {
 	timer_waiting=1;
 	TCCR0B = _BV(CS00);
 	TIMSK0 |= _BV(TOIE0);
+	timer_init_hl();
 }
 
 uint8_t timer_getdec_todo(void) {

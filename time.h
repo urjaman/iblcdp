@@ -11,11 +11,11 @@ struct mtm {
 	uint8_t sec; // 0-59
 };
 // Lindate is linear / 86400, granularity of day.
-uint8_t month_days(uint8_t year, uint8_t month);
-uint32_t mtm2linear(struct mtm * tm);
-uint24_t mtm2lindate(struct mtm* tm);
-void lindate2mtm(struct mtm*tm, uint24_t lindate);
-void linear2mtm(struct mtm*tm, uint32_t lintime);
+uint8_t month_days(uint8_t year, uint8_t month) PURE;
+uint32_t mtm2linear(struct mtm * tm) PURE;
+uint24_t mtm2lindate(struct mtm* tm) PURE;
+void lindate2mtm(struct mtm*tm, uint24_t lindate) PURE;
+void linear2mtm(struct mtm*tm, uint32_t lintime) PURE;
 
 #define TIME_EPOCH_YEAR 2000
 // Change that once per century or so :P

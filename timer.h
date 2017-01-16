@@ -3,6 +3,7 @@
 #include "time.h"
 
 void timer_run(void);
+void timer_init_hl(void);
 uint32_t timer_get(void);
 uint8_t timer_get_1hzp(void);
 uint8_t timer_get_todo(void);

@@ -4,7 +4,7 @@ $Id:$
 ST7565 LCD library! - No RAM buffer edition (NR)
 
 Copyright (C) 2010 Limor Fried, Adafruit Industries
-Copyright (C) 2014 Urja Rannikko <urjaman@gmail.com>
+Copyright (C) 2014,2016 Urja Rannikko <urjaman@gmail.com>
 
 This library is free software; you can redistribute it and/or
 modify it under the terms of the GNU Lesser General Public
@@ -15,10 +15,6 @@ This library is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 Lesser General Public License for more details.
-
-You should have received a copy of the GNU Lesser General Public
-License along with this library; if not, write to the Free Software
-Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
  // some of this code was written by <cstone@pobox.com> originally; it is in the public domain.
 */
@@ -119,7 +115,6 @@ void lcd_clear(void)
     lcd_char_x = 0;
     lcd_char_y = 0;
 }
-
 
 static void st7565_init(void) {
   // set pin directions
@@ -449,8 +444,80 @@ void lcd_write_dwb(uint8_t *buf, uint8_t w) {
         lcd_write_block(buf, w, 1);
 }
 
+// byte 0 bit 7 is Y=0 X=0
+// byte 1 bit 7 is Y=0 X=1
+// byte W bit 7 is Y=8 X=0
+// ..
+
+// These doublers are hardcoded to do h 1=>2 (aka 8 to 16)
+static void softdoubler(uint8_t* out, uint8_t* in, uint8_t w)
+{
+	memset(out,0,w*4); // so we can use |=  to generate output
+	for (uint8_t x=0;x<w;x++) {
+		uint8_t d = in[x];
+		for (uint8_t y=0;y<8;y++) {
+			uint8_t od = (d & _BV(7-y)) ? 0xF : 0x0;
+			uint8_t hn = 0; // have-neighbors
+			uint8_t nd = 0; // neigh-data;
+			if (y>0) {
+				hn |= _BV(0);
+				if (d & _BV(7-(y-1))) nd |= _BV(0);
+			}
+			if (x>0) {
+				hn |= _BV(1);
+				if (in[x-1] & _BV(7-y)) nd |= _BV(1);
+			}
+			if (x<(w-1)) {
+				hn |= _BV(2);
+				if (in[x+1] & _BV(7-y)) nd |= _BV(2);
+			}
+			if (y<7) {
+				hn |= _BV(3);
+				if (d & _BV(7-(y+1))) nd |= _BV(3);
+			}
+			if (!od)  nd ^= 0xF;
+			if (((hn&0x3) == 0x3)&&(nd == 0xC)) od ^= 0x8;
+			if (((hn&0x5) == 0x5)&&(nd == 0xA)) od ^= 0x2;
+			if (((hn&0xC) == 0xC)&&(nd == 0x3)) od ^= 0x1;
+			if (((hn&0xA) == 0xA)&&(nd == 0x5)) od ^= 0x4;
+
+			if (y>=4) {
+				out[(w+x)*2]   |= (od>>2) << ((7-y)*2);
+				out[(w+x)*2+1] |= (od&0x3) << ((7-y)*2);
+			} else {
+				out[x*2]   |= (od>>2) << ((3-y)*2);
+				out[x*2+1] |= (od&0x3) << ((3-y)*2);
+			}
+		}
+	}
+}
+
+
+#if 0
+// This is the old stuff...
+static void simpledoubler(uint8_t* out, uint8_t* in, uint8_t w)
+{
+        for (uint8_t i=0;i<w;i++) {
+        	uint8_t d = in[i];
+        	uint8_t hi = 0;
+        	uint8_t lo = 0;
+        	for (uint8_t n=0;n<4;n++) {
+        		hi = hi >> 2;
+        		lo = lo >> 2;
+        		if (d & _BV(4+n)) hi |= 0xC0;
+        		if (d & _BV(n)) lo |= 0xC0;
+        	}
+        	out[i*2] = hi;
+        	out[i*2+1] = hi;
+        	out[(w+i)*2] = lo;
+        	out[(w+i)*2+1] = lo;
+        }
+}
+#endif
+
 static void lcd_putchar_big(unsigned char c)
 {
+	uint8_t in[8];
 	uint8_t buf[32];
 
 	PGM_P block;
@@ -462,23 +529,8 @@ static void lcd_putchar_big(unsigned char c)
 	if ((lcd_char_x+(w*2))>LCDWIDTH) {
 		w = (LCDWIDTH - lcd_char_x)/2;
 	}
-        for (int i=0;i<w;i++) {
-        	uint8_t d = pgm_read_byte(block);
-        	block++;
-        	uint8_t hi = 0;
-        	uint8_t lo = 0;
-        	for (int i=0;i<4;i++) {
-        		hi = hi >> 2;
-        		lo = lo >> 2;
-        		if (d & _BV(4+i)) hi |= 0xC0;
-        		if (d & _BV(i)) lo |= 0xC0;
-        	}
-        	buf[i*2] = hi;
-        	buf[i*2+1] = hi;
-        	buf[(w+i)*2] = lo;
-        	buf[(w+i)*2+1] = lo;
-        }
-
+	memcpy_P(in, block, w);
+	softdoubler(buf, in, w);
         lcd_write_block(buf,w*2,2);
 }
 

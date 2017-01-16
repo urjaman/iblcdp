@@ -1,7 +1,7 @@
 # AVR-GCC Makefile
 
-COMMON_SOURCES=console.c lib.c appdb.c commands.c timer.c time.c cron.c sl-link.c
-COMMON_DEPS=main.h cron.h lib.h commands.h sl-link.h
+COMMON_SOURCES=console.c timer.c time.c cron.c sl-link.c uartif.c
+COMMON_DEPS=main.h cron.h sl-link.h uartif.h
 
 PROJECT=iblcdm64c1
 SOURCES=$(COMMON_SOURCES) main.c uart.c commands_m64c1.c avrpgm.c avrpgmif.c uart_tx.S slmaster.c
@@ -30,10 +30,22 @@ CFLAGS2=-mmcu=atmega1284 -Os -g -Wall -W -pipe -mcall-prologues -std=gnu99 -Wno-
 
 all: $(PROJECT).hex $(PROJECT2).bin size
 
+# This is like ciface/Makefile.ciface but adjusted for our dual target project needs
+CIP := ciface
+CFLAGS += -I$(CIP)
+CFLAGS2 += -I$(CIP)
+COMMON_DEPS += $(CIP)/ciface.h $(CIP)/appdb.h $(CIP)/console.h $(CIP)/lib.h
+COMMON_SOURCES += $(CIP)/appdb.c $(CIP)/commands.c $(CIP)/lib.c
+COMMON_CMD_SOURCES += $(CIP)/commands.c
+
+CMD1_SOURCES=$(COMMON_CMD_SOURCES) commands_m64c1.c
+CMD2_SOURCES=$(COMMON_CMD_SOURCES) commands_m1284.c
+
 $(PROJECT).hex: $(PROJECT).out
 	$(AVRBINDIR)$(OBJCOPY) -j .text -j .data -O ihex $(PROJECT).out $(PROJECT).hex
 
 $(PROJECT).out: $(SOURCES) timer-ll.o
+	$(CIP)/make_appdb.sh $(CMD1_SOURCES) > $(CIP)/appdb_db.c
 	$(AVRBINDIR)$(CC) $(CFLAGS) -flto -fwhole-program -flto-partition=none -mrelax -I./ -o $(PROJECT).out  $(SOURCES) timer-ll.o -lc -lm
 
 timer-ll.o: timer-ll.c timer.c main.h
@@ -46,6 +58,7 @@ $(PROJECT2).bin: $(PROJECT2).out
 	$(AVRBINDIR)$(OBJCOPY) -j .text -j .data -O binary $(PROJECT2).out $(PROJECT2).bin
 
 $(PROJECT2).out: $(SOURCES2) timer-ll2.o adc-ll.o
+	$(CIP)/make_appdb.sh $(CMD2_SOURCES) > $(CIP)/appdb_db.c
 	$(AVRBINDIR)$(CC) $(CFLAGS2) -flto -fwhole-program -flto-partition=none -mrelax -I./ -o $(PROJECT2).out  $(SOURCES2) timer-ll2.o adc-ll.o -lc -lm
 
 timer-ll2.o: timer-ll.c timer.c main.h

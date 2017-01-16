@@ -5,10 +5,10 @@
 #include "appdb.h"
 #include "timer.h"
 #include "avrpgm.h"
-#include "commands.h"
 #include "slmaster.h"
 
-void avrp_cmd(void) {
+CIFACE_APP(avrp_cmd, "AVRP")
+{
 	uint8_t d = avrp_test();
 	sendcrlf();
 	luint2outdual(d);
@@ -20,7 +20,8 @@ static void sldbg_handler(uint8_t ch, uint8_t l, uint8_t *buf) {
 	for (uint8_t n=0;n<l;n++) SEND(buf[n]);
 }
 
-void sldbg_cmd(void) {
+CIFACE_APP(sldbg_cmd, "SLDBG")
+{
 	uint8_t c;
 	sl_reg_ch_handler(0, sldbg_handler);
 	while (1) {

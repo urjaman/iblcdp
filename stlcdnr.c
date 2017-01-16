@@ -93,7 +93,7 @@ void lcd_init(void)
     SENDSTR("DISPLAY_ON\r\n");
     st7565_command(CMD_SET_ALLPTS_NORMAL);
     SENDSTR("ALLPTS_NORMAL\r\n");
-    st7565_set_contrast(28);
+    st7565_set_contrast(32);
     SENDSTR("CONTRAST\r\n");
     lcd_clear();
     SENDSTR("LCD_INIT DONE\r\n");

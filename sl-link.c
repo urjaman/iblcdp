@@ -2,6 +2,13 @@
 #include "sl-link.h"
 #include <util/crc16.h>
 
+
+static uint16_t sl_stat_bytes = 0;
+static uint16_t sl_stat_crc_errs = 0;
+static uint16_t sl_stat_frames = 0;
+static uint16_t sl_stat_ignframes = 0;
+
+
 static void (*sl_handlers[SL_MAX_CH])(uint8_t, uint8_t, uint8_t*) = { };
 
 int sl_reg_ch_handler(uint8_t ch, void(*cb)(uint8_t, uint8_t, uint8_t*) ) {
@@ -25,12 +32,13 @@ int sl_unreg_ch_handler(uint8_t ch) {
 
 static void sl_dispatch_rx(uint8_t ch, uint8_t l, uint8_t* buf)
 {
+	sl_stat_frames++;
 	if (ch >= SL_MAX_CH) {
-		// unimplemented ch, ignored
+		sl_stat_ignframes++;
 		return;
 	}
 	if (!sl_handlers[ch]) {
-		// unhandled ch, ignore
+		sl_stat_ignframes++;
 		return;
 	}
 	sl_handlers[ch](ch, l, buf);
@@ -47,6 +55,7 @@ void sl_parse_rx(uint8_t din) {
 	static uint8_t s_chid;
 	static uint8_t s_frame[15];
 	static uint8_t s_doff;
+	sl_stat_bytes++;
 	switch (s) {
 		default:
 		case S_FB1:
@@ -80,7 +89,7 @@ void sl_parse_rx(uint8_t din) {
 		case S_CRC:
 			s = S_FB1;
 			if (din != s_crc) {
-				// todo: report crc error
+				sl_stat_crc_errs++;
 				return;
 			}
 			sl_dispatch_rx(CHAN(s_chid), LEN(s_chid), s_frame);

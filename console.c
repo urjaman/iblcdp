@@ -59,6 +59,20 @@ void sendstr(const unsigned char * str) {
 	}
 }
 
+void sendcrlf(void) {
+	sendstr_P(PSTR("\r\n"));
+}
+
+void luint2outdual(unsigned long int val) {
+	unsigned char buf[11];
+	luint2str(buf,val);
+	sendstr(buf);
+	sendstr_P(PSTR(" ("));
+	luint2xstr(buf,val);
+	sendstr(buf);
+	sendstr_P(PSTR("h) "));
+}
+
 unsigned char* scanfor_notspace(unsigned char *buf) {
 	for (;;) {
 		if (!(*buf)) return buf;

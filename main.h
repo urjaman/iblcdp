@@ -47,3 +47,6 @@ typedef uint32_t uint24_t;
 #define unlikely(x)     __builtin_expect(!!(x), 0)
 
 #define PURE __attribute__((pure))
+
+#define RECEIVE() uart_recv()
+#define SEND(n) uart_send(n)

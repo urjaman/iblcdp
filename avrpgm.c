@@ -109,8 +109,8 @@ uint8_t avrp_vfy_signature(void) {
 	signature |= ((uint32_t)avrp_read_signature(0))<<16;
 	signature |= ((uint32_t)avrp_read_signature(1))<<8;
 	signature |=       avrp_read_signature(2);
-	dprint("SIGNATURE:");
-	dprint_hl(signature);
+	dprint("SIGNATURE ");
+//	dprint_hl(signature);
 	if (signature==AVR_TARGET_SIGNATURE) {
 		dprint(" OK\r\n");
 		return 0;

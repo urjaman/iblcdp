@@ -3,7 +3,6 @@
 #include "uart.h"
 #include "timer.h"
 #include "slmaster.h"
-#include "commands.h"
 #include <util/crc16.h>
 
 #define TX_BUFLEN 64

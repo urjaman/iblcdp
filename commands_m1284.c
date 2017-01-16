@@ -1,7 +1,5 @@
 /*
- * This file is part of the am644-disp project.
- *
- * Copyright (C) 2013,2014 Urja Rannikko <urjaman@gmail.com>
+ * Copyright (C) 2013,2014,2016 Urja Rannikko <urjaman@gmail.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -13,9 +11,6 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
  */
 
 #include "main.h"
@@ -26,8 +21,9 @@
 #include "glcd.h"
 #include "rgbbl.h"
 #include "stlcdnr.h"
+#include "ciface.h"
 
-void lcdw_cmd(void)
+CIFACE_APP(lcdw_cmd, "LCDW")
 {
 	if (token_count >= 3) {
 		uint8_t y = astr2luint(tokenptrs[1]);
@@ -40,7 +36,7 @@ void lcdw_cmd(void)
 	}
 }
 
-void ldw_cmd(void)
+CIFACE_APP(ldw_cmd, "LDW")
 {
 	if (token_count >= 3) {
 		uint8_t y = astr2luint(tokenptrs[1]);
@@ -53,7 +49,7 @@ void ldw_cmd(void)
 	}
 }
 
-void blset_cmd(void)
+CIFACE_APP(blset_cmd, "BLSET")
 {
     if (token_count >= 3) {
         uint8_t r = astr2luint(tokenptrs[1]);
@@ -99,7 +95,8 @@ void fader(void) {
 	_delay_ms(4);
 }
 
-void fader_cmd(void) {
+CIFACE_APP(fader_cmd, "FADER")
+{
 	if (token_count >= 7) {
 	        cur_red = astr2luint(tokenptrs[4]);
 	        cur_green = astr2luint(tokenptrs[5]);
@@ -119,12 +116,13 @@ void fader_cmd(void) {
 }
 
 
-void lcdr_cmd(void)
+CIFACE_APP(lcdr_cmd, "LCDR")
 {
 	lcd_init();
 }
 
-void lcdbr_cmd(void) {
+CIFACE_APP(lcdbr_cmd, "LCDBR")
+{
 	if (token_count >= 2) {
 		uint32_t val = astr2luint(tokenptrs[1]);
 		if (val>63) return;
@@ -141,31 +139,9 @@ static void bargraph(uint8_t x, uint8_t y, uint8_t h, uint8_t w, uint8_t f) {
 	lcd_write_block(dd->d,w,h);
 }
 
-void lgfxt_cmd(void) {
-    struct drawdata *dd;
-    make_drawdata(dd,LCD_MAXX,LCD_MAXY);
-    uint8_t xc = dd->w/2;
-    uint8_t yc = dd->h/2;
-    fillrect(dd,1,1,6,6,1);
-    fillrect(dd,120,0,8,8,1);
-    fillrect(dd,121,1,6,6,0);
-    drawline(dd,7,9,1,63,1);
-    drawline(dd,1,63,127,57,1);
-    drawline(dd,1,57,127,63,1);
-    drawline(dd,121,9,127,63,1);
-    fillcircle(dd,xc,yc,3,1);
-    drawcircle(dd,xc,yc,5,1);
-    drawcircle(dd,xc,yc,8,1);
-    drawcircle(dd,xc,yc,11,1);
-    drawcircle(dd,xc,yc,14,1);
-    drawcircle(dd,xc,yc,17,1);
-    drawcircle(dd,xc,yc,20,1);
-    lcd_gotoxy(0,0);
-    lcd_write_block(dd->d,LCD_MAXX,LCD_MAXY);
-}
 
-
-void lcdbg_cmd(void) {
+CIFACE_APP(lcdbg_cmd, "LBG")
+{
 	if (token_count >= 6) {
 		uint8_t y = astr2luint(tokenptrs[1]);
 		uint8_t x = astr2luint(tokenptrs[2]);
@@ -176,38 +152,8 @@ void lcdbg_cmd(void) {
 	}
 }
 
-
-
-void lbench_cmd(void) {
-	uint16_t start = TCNT1;
-	for (uint8_t i=0;i<=32;i++) {
-		bargraph(0,0,LCD_MAXY,LCD_MAXX,i*4);
-	}
-	uint16_t passed = TCNT1 - start;
-	luint2outdual(passed);
-}
-
-void lcdc_cmd(void)
-{
-	for (uint8_t y=0;y<7;y++) {
-		lcd_gotoxy(0,y);
-		for (uint8_t i=0;i<LCD_MAXX;i++) lcd_putchar(i+(y*16)+32);
-	}
-	for (uint8_t y=7;y<8;y++) {
-		lcd_gotoxy(0,y);
-		for (uint8_t i=0;i<LCD_MAXX;i++) lcd_putchar(i+((y-7)*16)+192);
-	}
-}
-
-void lcdclr_cmd(void)
+CIFACE_APP(lcdclr_cmd, "LCLR")
 {
     lcd_clear();
 }
 
-void lcdc2_cmd(void)
-{
-    for (uint8_t y=0;y<8;y++) {
-        lcd_gotoxy(0,y);
-		for (uint8_t i=0;i<LCD_MAXX;i++) lcd_putchar(i+(y*16)+128);
-    }
-}

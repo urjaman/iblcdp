@@ -448,9 +448,9 @@ void lcd_write_dwb(uint8_t *buf, uint8_t w) {
 // byte 1 bit 7 is Y=0 X=1
 // byte W bit 7 is Y=8 X=0
 // ..
-
+#if 0
 // These doublers are hardcoded to do h 1=>2 (aka 8 to 16)
-static void softdoubler(uint8_t* out, uint8_t* in, uint8_t w)
+static void doubler(uint8_t* out, uint8_t* in, uint8_t w)
 {
 	memset(out,0,w*4); // so we can use |=  to generate output
 	for (uint8_t x=0;x<w;x++) {
@@ -492,10 +492,10 @@ static void softdoubler(uint8_t* out, uint8_t* in, uint8_t w)
 	}
 }
 
+#else
 
-#if 0
 // This is the old stuff...
-static void simpledoubler(uint8_t* out, uint8_t* in, uint8_t w)
+static void doubler(uint8_t* out, uint8_t* in, uint8_t w)
 {
         for (uint8_t i=0;i<w;i++) {
         	uint8_t d = in[i];
@@ -530,7 +530,7 @@ static void lcd_putchar_big(unsigned char c)
 		w = (LCDWIDTH - lcd_char_x)/2;
 	}
 	memcpy_P(in, block, w);
-	softdoubler(buf, in, w);
+	doubler(buf, in, w);
         lcd_write_block(buf,w*2,2);
 }
 
